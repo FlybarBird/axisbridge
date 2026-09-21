@@ -1,0 +1,66 @@
+// Optional end-to-end portal test: npm install playwright, then node tests/portal-browser.cjs
+const fs=require('fs'), os=require('os'), path=require('path'), cp=require('child_process');
+const {chromium,expect}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES ? process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright' : 'playwright');
+const root=path.resolve(__dirname,'..'), tmp=fs.mkdtempSync(path.join(os.tmpdir(),'axisbridge-portal-'));
+const screenshots=process.env.AXISBRIDGE_SCREENSHOTS || path.join(root,'artifacts');
+fs.mkdirSync(screenshots,{recursive:true});
+const python=process.env.AXISBRIDGE_PYTHON || (process.platform==='win32'?'python':'python3');
+const server=cp.spawn(python,[path.join(root,'run.py'),'--host','127.0.0.1','--port','0','--data-dir',tmp,'--no-browser'],{cwd:root,stdio:['pipe','pipe','pipe']});
+let logs='',serverErrors='';server.stdout.on('data',d=>logs+=d);server.stderr.on('data',d=>serverErrors+=d);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function until(fn,label){for(let i=0;i<100;i++){if(await fn())return;await sleep(100)}throw new Error('Timed out: '+label)}
+let browser;
+(async()=>{
+ await until(()=>logs.includes('Portal:'),'server startup');
+ const base=logs.match(/Portal: (http:\/\/[^\s]+)/)[1];
+ browser=await chromium.launch({headless:true,...(process.env.AXISBRIDGE_BROWSER?{executablePath:process.env.AXISBRIDGE_BROWSER}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
+ const page=await browser.newPage({viewport:{width:1440,height:1120}});const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base);await page.locator('#login').waitFor({state:'visible'});
+ await page.locator('#access-key').fill(fs.readFileSync(path.join(tmp,'portal-key.txt'),'utf8').trim());
+ await page.locator('#login-form button').click();await page.locator('#app').waitFor({state:'visible'});
+ await page.locator('#start-demo').click();await page.locator('#demo-panel').waitFor({state:'visible'});
+ await until(async()=>await page.evaluate(async()=>{let s=await(await fetch('/api/state')).json();return s.entities.length===3}),'demo entities');
+ await page.locator('#first-block').click();await page.locator('#block-name').fill('Upstage truss · intensity');
+ await page.locator('#block-entity').selectOption('demo/1');await page.locator('#block-axis').selectOption('z');
+ await page.locator('#block-targets').fill('1.1, 1.2, 2.15');await page.locator('#block-form button[type=submit]').click();
+ await page.locator('#block-dialog').waitFor({state:'hidden'});
+ await page.locator('[data-capture=bottom]').click();
+ await until(async()=>await page.locator('.capture strong').first().textContent()==='0.000','bottom capture');
+ async function slider(id,value){await page.locator('#demo-'+id).evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}))},String(value));}
+ await slider(1,100);await until(async()=>await page.locator('[data-value]').first().textContent()==='10.0000','top position');
+ await page.locator('[data-capture=top]').click();
+ await until(async()=>await page.locator('[data-percent]').first().textContent()==='100.0','top mapping');
+ await slider(1,35);await until(async()=>await page.locator('[data-percent]').first().textContent()==='35.0','midpoint mapping');
+ await page.locator('#add-block').click();await page.locator('#block-name').fill('Center pod · backlight');
+ await page.locator('#block-entity').selectOption('demo/2');await page.locator('#block-bottom').fill('0');await page.locator('#block-top').fill('10');
+ await page.locator('#block-targets').fill('3.1, 3.2');await page.locator('#block-form button[type=submit]').click();
+ await page.locator('#block-dialog').waitFor({state:'hidden'});
+ await until(async()=>await page.locator('[data-percent]').nth(1).textContent()==='50.0','second mapping');
+ page.once('dialog',d=>d.accept('Raynok / Lighting rehearsal'));await page.locator('#rename-show').click();
+ await until(async()=>await page.locator('#side-show-name').textContent()==='Raynok / Lighting rehearsal','show rename');
+ await page.locator('#toast').waitFor({state:'hidden'});
+ await page.screenshot({path:path.join(screenshots,'AxisBridge-Portal.png'),fullPage:true});
+ await page.locator('[data-view=monitor]').click();await until(async()=>await page.locator('#entity-table tr').count()===3,'monitor entities');
+ await page.screenshot({path:path.join(screenshots,'AxisBridge-Monitor.png'),fullPage:true});
+ await page.locator('[data-view=network]').click();await page.locator('[name=psn_interface]').fill('10.10.10.20');await page.locator('[name=ma_interface]').fill('192.168.0.20');await page.locator('[name=ma_host]').fill('192.168.0.1');await page.locator('[name=ma_user]').fill('bridge');await page.locator('#network-form button[type=submit]').click();
+ await until(async()=>await page.locator('#toast').textContent()==='Network settings saved','network save');
+ await page.locator('#toast').waitFor({state:'hidden'});
+ await page.screenshot({path:path.join(screenshots,'AxisBridge-Network.png'),fullPage:true});
+ // Reload proves persisted show and settings, without restoring armed output.
+ await page.reload();await page.locator('#app').waitFor({state:'visible'});
+ await until(async()=>await page.locator('.block-card').count()===2,'show restored');
+ const exported=await page.evaluate(async()=>await(await fetch('/api/export')).json());
+ if(exported.blocks[0].targets.length!==3||exported.network.ma_interface!=='192.168.0.20')throw Error('Show persistence mismatch');
+ if(JSON.stringify(exported).includes('password'))throw Error('Password was exported');
+ await page.setViewportSize({width:390,height:844});await page.locator('[data-view=blocks]').click();
+ await until(async()=>await page.locator('#demo-1').inputValue()==='35','demo slider restored');
+ await page.screenshot({path:path.join(screenshots,'AxisBridge-Mobile.png'),fullPage:true});
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);if(overflow)throw Error('Mobile horizontal overflow');
+ await page.locator('[data-edit]').first().click();await page.locator('#block-dialog').waitFor({state:'visible'});
+ if(await page.locator('#block-targets').inputValue()!=='1.1, 1.2, 2.15')throw Error('Editor lost target assignments');
+ await page.locator('#cancel-dialog').click();
+ await page.locator('#exit-demo').click();await page.locator('#demo-panel').waitFor({state:'hidden'});
+ if(errors.length)throw Error(errors.join('\n'));
+ console.log('Portal end-to-end: PASS — login, demo, block creation, capture, multiple targets, monitor, network save, reload, mobile layout, editor, demo exit.');
+})().catch(e=>{console.error(e.stack);if(serverErrors)console.error(serverErrors);process.exitCode=1}).finally(async()=>{if(browser)await browser.close();server.kill('SIGINT');await new Promise(r=>server.once('exit',r));fs.rmSync(tmp,{recursive:true,force:true});});
