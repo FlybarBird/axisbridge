@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+case "${1:-status}" in
+    status) /etc/init.d/axisbridge status ;;
+    start|stop|restart|enable|disable) /etc/init.d/axisbridge "$1" ;;
+    key) cat /etc/axisbridge/portal-key.txt ;;
+    logs) logread -e axisbridge ;;
+    uninstall)
+        /usr/bin/python3 /usr/share/axisbridge/manage.py uninstall ;;
+    *) printf 'Usage: axisbridge-ctl [status|start|stop|restart|enable|disable|key|logs|uninstall]\n' >&2; exit 1 ;;
+esac
