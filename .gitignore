@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+.env
+.env.*
+.DS_Store
+Thumbs.db
+build/
+dist/
+*.spec
+artifacts/
+portal-key.txt
+current-show.json
+installation.json

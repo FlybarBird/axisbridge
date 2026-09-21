@@ -1,0 +1,3 @@
+# Optional: full adapter names/IPv4 enumeration in the portal.
+# The bridge also runs without this package; enter adapter IPv4 addresses manually.
+psutil>=5.9,<8
