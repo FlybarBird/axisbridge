@@ -15,6 +15,9 @@ Verified in the development environment on 2026-09-22.
 - Portal browser test in Chromium: login, demo signals, block creation, live bottom/top capture, multiple targets, monitor, network save, show persistence after reload, phone-width layout, editor, and demo exit.
 - Live demo-to-MA output, owner-only password persistence, saved PSN/MA auto-connect settings, and startup safety hold.
 - Desktop/mobile screenshots inspected. A demo-slider display reset after browser reload was found and fixed, and the portal test was rerun successfully.
+- GitHub native builds passed all 31 tests on both `macos-15-intel` and Windows x64 runners.
+- The Intel Mac app contains x86_64 launcher/service Mach-O binaries; its ad-hoc bundle signature passed strict verification.
+- The Windows app is a PE32+ x86-64 executable and passed its command-line startup smoke check on Windows.
 
 ## Not verified here
 

@@ -53,7 +53,7 @@ jobs:
           test "$(lipo -archs "$app/Contents/Resources/axisbridge")" = "x86_64"
           codesign --force --deep --sign - "$app"
           ditto -c -k --sequesterRsrc --keepParent "$app" packages/AxisBridge-macOS-Intel.zip
-          shasum -a 256 packages/AxisBridge-macOS-Intel.zip > packages/AxisBridge-macOS-Intel.zip.sha256
+          (cd packages && shasum -a 256 AxisBridge-macOS-Intel.zip > AxisBridge-macOS-Intel.zip.sha256)
 
       - name: Package Windows application
         if: runner.os == 'Windows'
@@ -63,7 +63,10 @@ jobs:
           & .\dist\AxisBridge.exe --help | Out-Null
           Compress-Archive -Path dist\AxisBridge.exe -DestinationPath packages\AxisBridge-Windows-x64.zip
           $hash = (Get-FileHash packages\AxisBridge-Windows-x64.zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  AxisBridge-Windows-x64.zip" | Set-Content -Encoding ascii packages\AxisBridge-Windows-x64.zip.sha256
+          [IO.File]::WriteAllText(
+            (Join-Path $PWD "packages\AxisBridge-Windows-x64.zip.sha256"),
+            "$hash  AxisBridge-Windows-x64.zip`n",
+            [Text.Encoding]::ASCII)
 
       - name: Upload application
         uses: actions/upload-artifact@v4
@@ -72,4 +75,3 @@ jobs:
           path: packages/${{ matrix.artifact }}.zip*
           if-no-files-found: error
           retention-days: 30
-

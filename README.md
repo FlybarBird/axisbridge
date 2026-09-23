@@ -9,7 +9,9 @@ This release includes runnable source, an Intel Mac application, a Windows x64 e
 
 - [Mac, Windows, and Raspberry Pi source package](downloads/AxisBridge-v0.1.0.zip)
 - [Intel Mac application](downloads/AxisBridge-macOS-Intel.zip) — macOS 13 or newer
+- [Intel Mac SHA-256](downloads/AxisBridge-macOS-Intel.zip.sha256)
 - [Windows x64 application](downloads/AxisBridge-Windows-x64.zip)
+- [Windows x64 SHA-256](downloads/AxisBridge-Windows-x64.zip.sha256)
 - [Slate 7 installer](downloads/AxisBridge-Slate7-Installer-v0.1.0.tar.gz)
 - [Slate 7 quick start](downloads/AxisBridge-Slate7-Quick-Start.md)
 - [Slate 7 full setup guide](slate7/SETUP.md)
