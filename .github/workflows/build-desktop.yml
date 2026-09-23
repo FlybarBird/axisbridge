@@ -34,6 +34,13 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests -v
 
+      - name: Test Mac launcher key parsing
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          clang -fobjc-arc -framework Cocoa tests/test_macos_launcher.m -o "$RUNNER_TEMP/axisbridge-launcher-test"
+          "$RUNNER_TEMP/axisbridge-launcher-test"
+
       - name: Build native service
         run: python scripts/build.py
 

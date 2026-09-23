@@ -148,8 +148,9 @@
     [self.outputBuffer appendString:text];
     NSRange newline;
     while ((newline = [self.outputBuffer rangeOfString:@"\n"]).location != NSNotFound) {
-        NSString *line = [[self.outputBuffer substringToIndex:newline.location]
-            stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+        // Spaces can be the entire access key; remove only the CR in CRLF.
+        NSString *line = [self.outputBuffer substringToIndex:newline.location];
+        if ([line hasSuffix:@"\r"]) line = [line substringToIndex:line.length - 1];
         [self.outputBuffer deleteCharactersInRange:NSMakeRange(0, NSMaxRange(newline))];
         if ([line hasPrefix:@"Portal: "]) self.portalURL = [NSURL URLWithString:[line substringFromIndex:@"Portal: ".length]];
         else if ([line hasPrefix:@"Access key: "]) self.accessKey = [line substringFromIndex:@"Access key: ".length];
@@ -162,7 +163,7 @@
     self.openedPortal = YES;
     self.statusLabel.stringValue = @"● AxisBridge is running";
     self.statusLabel.textColor = NSColor.systemGreenColor;
-    self.detailLabel.stringValue = [NSString stringWithFormat:@"Portal: %@ · Output starts held for safety.", self.portalURL.absoluteString];
+    self.detailLabel.stringValue = [NSString stringWithFormat:@"Portal: %@ · Saved connection/output settings restored.", self.portalURL.absoluteString];
     self.openButton.enabled = YES;
     [self openPortal:nil];
 }
