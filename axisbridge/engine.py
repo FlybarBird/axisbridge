@@ -283,6 +283,58 @@ class Engine:
             self.log(f"Captured {endpoint} for {row['name']}: {state['value']:.5f}")
             return result
 
+    def capture_screen(self, endpoint, revision):
+        """Commit every selected endpoint together, or change none of them."""
+        with self.lock:
+            if endpoint not in ('bottom', 'top'):
+                raise ValueError('Choose bottom or top')
+            if revision != self.revision:
+                raise Conflict('Selection changed. Hold again.')
+            if self.armed:
+                raise Conflict('Hold output in the portal first')
+            rows = [b for b in self.show['blocks'] if b['on_screen']]
+            if not rows:
+                raise ValueError('Select blocks in the portal')
+            draft = copy.deepcopy(self.show)
+            now = time.monotonic()
+            for row in rows:
+                if not row['enabled']:
+                    raise ValueError(row['name'] + ': block disabled')
+                state = self.block_state(row, now)
+                if state['value'] is None or state['age_ms'] > self.show['network']['timeout_ms']:
+                    raise ValueError(row['name'] + ': no fresh signal')
+                opposite = row['top' if endpoint == 'bottom' else 'bottom']
+                if opposite is not None and abs(opposite - state['value']) < 1e-9:
+                    raise ValueError(row['name'] + ': low and high must differ')
+                next(b for b in draft['blocks'] if b['id'] == row['id'])[endpoint] = state['value']
+            result = self.save(draft, revision)
+            self.log(f"Slate screen: captured {endpoint} for {len(rows)} selected blocks")
+            return result
+
+    def screen_snapshot(self):
+        with self.lock:
+            now = time.monotonic()
+            rows = [{**self.block_state(b, now), 'name': b['name'], 'enabled': b['enabled']}
+                    for b in self.show['blocks'] if b['on_screen']]
+            fresh = any(now - t <= self.show['network']['timeout_ms'] / 1000
+                        for e in self.entities.values() if e['source'] != 'demo'
+                        for t in e['times'].values())
+            reason = ('Hold output in the portal' if self.armed else
+                      'Select blocks in Slate screen' if not rows else '')
+            if not reason:
+                for b in rows:
+                    if not b['enabled']:
+                        reason = b['name'] + ': disabled'
+                        break
+                    if b['value'] is None or b['age_ms'] > self.show['network']['timeout_ms']:
+                        reason = b['name'] + ': no fresh signal'
+                        break
+            return {'revision': self.revision, 'armed': self.armed, 'demo': self.demo,
+                    'psn': 'DEMO' if self.demo else 'LIVE' if fresh and self.receiver else
+                           'WAIT' if self.receiver else 'OFF',
+                    'ma': 'LIVE' if self.ma_state == 'ready' else 'OFF',
+                    'blocks': rows, 'reason': reason}
+
     def start_input(self):
         with self.lock:
             if self.demo:

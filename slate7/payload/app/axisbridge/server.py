@@ -84,7 +84,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
-        if path in ('/', '/app.js', '/style.css', '/status.css', '/favicon.svg'):
+        if path in ('/', '/app.js', '/screen.js', '/style.css', '/status.css', '/favicon.svg'):
             filename = 'index.html' if path == '/' else path[1:]
             file = WEB / filename
             if file.exists():

@@ -34,6 +34,8 @@ def refresh_manifest(files: list[Path]) -> None:
 
 
 def build_archive() -> None:
+    shutil.copytree(ROOT / 'axisbridge', SOURCE / 'payload/app/axisbridge', dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.DS_Store'))
     files = package_files()
     refresh_manifest(files)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

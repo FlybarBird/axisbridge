@@ -20,7 +20,7 @@ DATA=Path('/etc/axisbridge')
 SERVICE=Path('/etc/init.d/axisbridge')
 SETTINGS=Path('/etc/config/axisbridge')
 CONTROL=Path('/usr/bin/axisbridge-ctl')
-VERSION='0.1.0-slate7.5'
+VERSION='0.1.0-slate7.6'
 
 
 def is_slate7_model(value):

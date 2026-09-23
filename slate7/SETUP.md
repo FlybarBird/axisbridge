@@ -2,11 +2,29 @@
 
 **Target:** GL.iNet Slate 7 **GL-BE3600**, running GL.iNet/OpenWrt firmware with `procd` and a firmware-compatible **Python 3.10+** package.
 
-Package version: **0.1.0-slate7.5**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
+Package version: **0.1.0-slate7.6**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
 
 This is a shell installer archive for SSH installation. It is **not router firmware** and must **not** be uploaded through the router's Firmware Upgrade page. An `.ipk` is not supplied because the installed firmware/package format and dependency versions have not been provided. The installer detects `opkg` or `apk` and uses only the router's existing package feeds.
 
 ## Installation
+
+### Optional hardware home screen
+
+The built-in 284 × 76 touchscreen can show PSN/MA status and large **Update Low** / **Update High** buttons. Enable it after installation:
+
+```sh
+uci set axisbridge.main.screen_enabled='1'
+uci commit axisbridge
+axisbridge-ctl restart
+```
+
+In the portal, open **Slate screen**, choose the blocks to include, and save. No blocks are selected automatically. The chosen names and positions cycle along the bottom of the hardware screen. Both buttons apply to the entire selected group. A continuous **four-second hold** shows a countdown and progress bar; release or slide off to cancel. A completed hold applies once, with a new release required before another capture. Low maps to 0%, High to 100%.
+
+Output must be held. Every selected block must be enabled with a fresh axis sample, and low/high must differ. If any selected block fails these checks, nothing is changed. Selection changes during a hold cancel it. Status boxes distinguish PSN LIVE (fresh traffic), WAIT (listening without fresh data), DEMO, and OFF; MA LIVE means authenticated.
+
+The screen uses the firmware's existing framebuffer/touch drivers. The original GL.iNet screen is restored when AxisBridge stops, including a normal uninstall. To keep the stock screen, set `screen_enabled='0'`, commit, and restart AxisBridge. Display geometry and touch calibration follow [GL.iNet's gl-lvgl implementation](https://github.com/gl-inet/gl-lvgl/blob/main/patches/03-fix-gl-lcd-init.patch).
+
+### Install the bridge
 
 Keep the router connected to the internet for the first install if it needs Python. Keep it off the show networks until its network configuration is complete.
 

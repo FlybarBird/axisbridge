@@ -29,4 +29,6 @@ The package includes the full bridge, automatic service startup, persistent show
 
 Manage it with `axisbridge-ctl status`, `axisbridge-ctl logs`, or `axisbridge-ctl restart`. Remove it with `axisbridge-ctl uninstall`; saved shows and keys remain.
 
-Verified with 11 installer tests and all 31 app tests in development. Installation preflight was also verified against production Slate 7 firmware identifiers. Raynok/grandMA2 hardware testing remains outstanding.
+For the optional hardware home screen, set `uci set axisbridge.main.screen_enabled='1'`, run `uci commit axisbridge`, then `axisbridge-ctl restart`. In the portal's **Slate screen** page, select the blocks to show. Hold **Update Low** or **Update High** for four seconds to capture every selected block together. Release early or slide off to cancel. Output must be held and all selected signals fresh. Set `screen_enabled='0'` and restart to restore the GL.iNet screen.
+
+Verified with 11 installer tests and 43 application tests, plus installation and framebuffer readback on a physical Slate 7. Raynok/grandMA2 calibration and physical touch acceptance remain operator checks.

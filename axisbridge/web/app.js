@@ -31,15 +31,16 @@ function renderConfig() {
   $('fader-stat').textContent=String(count).padStart(2,'0');
   $('fader-detail').textContent=show.blocks.filter(b=>b.enabled).length+' enabled control blocks';
   if(state) renderState();
+  document.dispatchEvent(new Event('axisbridge-config'));
 }
 function entityName(b) { return state?.entities.find(e=>e.source===b.source&&e.tracker_id===b.tracker_id)?.name || (b.tracker_id == null ? 'Choose a PSN entity' : 'Entity '+b.tracker_id); }
 function view(name) {
   activeView=name;
   for(const el of document.querySelectorAll('.view')) el.hidden=el.id!=='view-'+name;
   for(const el of document.querySelectorAll('[data-view]')) el.classList.toggle('active',el.dataset.view===name);
-  $('view-label').textContent=({blocks:'CONTROL BLOCKS',monitor:'SIGNAL MONITOR',network:'NETWORK'})[name];
-  $('page-title').textContent=({blocks:'Position into playback.',monitor:'Every signal. In sight.',network:'Make the connection.'})[name];
-  $('page-subtitle').textContent=({blocks:'Map a moving axis to the faders that follow it.',monitor:'Watch incoming positions and the commands leaving your bridge.',network:'Keep your PSN and MA networks on their own adapters.'})[name];
+  $('view-label').textContent=({blocks:'CONTROL BLOCKS',monitor:'SIGNAL MONITOR',network:'NETWORK',screen:'SLATE SCREEN'})[name];
+  $('page-title').textContent=({blocks:'Position into playback.',monitor:'Every signal. In sight.',network:'Make the connection.',screen:'Your hardware home screen.'})[name];
+  $('page-subtitle').textContent=({blocks:'Map a moving axis to the faders that follow it.',monitor:'Watch incoming positions and the commands leaving your bridge.',network:'Keep your PSN and MA networks on their own adapters.',screen:'Choose the blocks controlled by the Slate 7 touchscreen.'})[name];
   if(state) renderState();
 }
 function renderState() {
@@ -79,6 +80,7 @@ function renderState() {
     for(const btn of card.querySelectorAll('[data-capture]')) btn.disabled=state.armed||b.value==null||b.age_ms>show.network.timeout_ms;
   }
   if(activeView==='monitor') renderMonitor();
+  document.dispatchEvent(new Event('axisbridge-state'));
 }
 function renderConnectionBoxes() {
   const psn=$('psn-status-box'), ma=$('ma-status-box');

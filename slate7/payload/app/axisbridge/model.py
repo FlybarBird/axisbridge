@@ -103,6 +103,9 @@ def validate_show(raw):
         enabled = row.get('enabled', True)
         if not isinstance(enabled, bool):
             raise ValueError('Enabled must be true or false')
+        on_screen = row.get('on_screen', False)
+        if not isinstance(on_screen, bool):
+            raise ValueError('Show on Slate screen must be true or false')
         outputs = row.get('targets', [])
         if not isinstance(outputs, list) or len(outputs) > 64:
             raise ValueError('A block supports up to 64 faders')
@@ -117,7 +120,7 @@ def validate_show(raw):
                 targets.add(target)
         result['blocks'].append({'id': ident, 'name': str(row.get('name', 'Control block'))[:100],
             'source': source, 'tracker_id': tracker, 'axis': axis, 'bottom': bottom, 'top': top,
-            'enabled': enabled, 'targets': clean_targets,
+            'enabled': enabled, 'on_screen': on_screen, 'targets': clean_targets,
             'smoothing_ms': number(row.get('smoothing_ms', 0), 'Smoothing', 0, 10000, True)})
     return result
 
