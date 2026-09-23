@@ -186,6 +186,7 @@ function openMaConnectDialog(){
   if(!show.network.ma_interface||!show.network.ma_host||!show.network.ma_user){view('network');throw new Error('Set and save the MA adapter, console address, and username first.');}
   $('ma-connect-target').textContent=`${show.network.ma_host}:${show.network.ma_port} · ${show.network.ma_user}`;
   $('ma-connect-password').value=$('ma-password').value;
+  $('ma-connect-dialog').querySelector('.dialog-note').textContent=show.network.auto_arm_ma?'Output enables automatically after MA login succeeds. Fresh, calibrated blocks send immediately.':'Output stays held after connection until you choose Arm output.';
   $('ma-connect-dialog').showModal();
   $('ma-connect-password').focus();
 }

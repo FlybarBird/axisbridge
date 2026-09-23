@@ -2,12 +2,12 @@
 
 For **GL.iNet Slate 7 GL-BE3600**. This is an SSH installer, **not a firmware image**.
 
-1. Upload `AxisBridge-Slate7-Installer-v0.1.0.tar.gz` to the router's `/tmp` directory.
+1. Upload `AxisBridge-Slate7-Installer-v0.1.1.tar.gz` to the router's `/tmp` directory.
 2. SSH to the router as root. Run:
 
 ```sh
 cd /tmp
-tar -xzf AxisBridge-Slate7-Installer-v0.1.0.tar.gz
+tar -xzf AxisBridge-Slate7-Installer-v0.1.1.tar.gz
 cd AxisBridge-Slate7-Installer
 sh install.sh --check
 sh install.sh
@@ -23,12 +23,12 @@ axisbridge-ctl key
 
 If 8080 is occupied, install with `sh install.sh --port=8081`.
 
-The package includes the full bridge, automatic service startup, persistent show storage, saved auto-connect settings, and upgrade rollback. With auto-connect enabled, PSN and MA reconnect after a restart, but output always starts **held**. Arm through the portal only after checking both status boxes.
+The package includes the full bridge, automatic service startup, persistent show storage, saved auto-connect settings, and upgrade rollback. Enable both auto-connect options and **Enable output automatically after MA login** for plug-in-and-run operation: PSN starts, MA reconnects, and fresh calibrated blocks send after successful MA login. No browser or portal login is needed for normal operation. Automatic output is opt-in; otherwise output starts held.
 
 **Configure networking before connecting show equipment.** The installer preserves the current router network configuration. The included `SETUP.md` explains assigning separate Ethernet interfaces to PSN and MA, maintaining Wi-Fi management access, and configuring DHCP/firewall rules. Its `APP-GUIDE.md` covers control blocks and calibration.
 
 Manage it with `axisbridge-ctl status`, `axisbridge-ctl logs`, or `axisbridge-ctl restart`. Remove it with `axisbridge-ctl uninstall`; saved shows and keys remain.
 
-For the optional hardware home screen, set `uci set axisbridge.main.screen_enabled='1'`, run `uci commit axisbridge`, then `axisbridge-ctl restart`. In the portal's **Slate screen** page, select the blocks to show. Hold **Update Low** or **Update High** for four seconds to capture every selected block together. Release early or slide off to cancel. Output must be held and all selected signals fresh. Set `screen_enabled='0'` and restart to restore the GL.iNet screen.
+For the optional hardware home screen, set `uci set axisbridge.main.screen_enabled='1'`, run `uci commit axisbridge`, then `axisbridge-ctl restart`. In the portal's **Slate screen** page, select the blocks to show. Hold **Update Low** or **Update High** for four seconds to capture selected blocks, including while output is live. Both buttons skip blocks still at the opposite saved endpoint or already at the endpoint being saved, preserving their calibration. The screen displays saved/skipped counts. Release early or slide off to cancel. All selected blocks must be enabled with fresh signals, and low/high must differ; new ranges apply immediately. Set `screen_enabled='0'` and restart to restore the GL.iNet screen.
 
-Verified with 11 installer tests and 43 application tests, plus installation and framebuffer readback on a physical Slate 7. Raynok/grandMA2 calibration and physical touch acceptance remain operator checks.
+Verified with 11 installer tests and 59 application tests, plus installation, touch/hold behavior, and MA login/demo transport on a physical Slate 7. Both selective capture paths passed isolated checks on the router. Actual Raynok input and console fader/parameter readback remain operator checks.

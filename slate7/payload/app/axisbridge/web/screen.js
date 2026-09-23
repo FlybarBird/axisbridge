@@ -10,7 +10,7 @@
   section.id = 'view-screen'; section.className = 'view'; section.hidden = true;
   section.innerHTML = `<div class="panel"><h2>Blocks on the home screen</h2>
     <p class="muted">Choose which blocks the physical <b>Update Low</b> and <b>Update High</b> buttons capture. Each button needs a continuous four-second hold. Release or slide away to cancel.</p>
-    <p class="muted">All selected blocks update together. Output must be held and every selected block must have a fresh signal. Low = 0% · High = 100%.</p>
+    <p class="muted">Capture works while output is live. Both buttons skip blocks still at the opposite saved endpoint or already at the endpoint being saved, preserving their calibration. The Slate shows saved/skipped counts. Every selected block must be enabled with a fresh signal. Low = 0% · High = 100%. New ranges apply immediately.</p>
     <form id="screen-form"><fieldset id="screen-options" style="border:0;padding:0;margin:20px 0"></fieldset>
     <div class="network-actions"><button class="primary" type="submit" id="screen-save">Save screen selection</button>
     <button type="button" class="quiet" id="screen-reset">Reset edits</button></div></form>
@@ -30,21 +30,18 @@
   }
   function update() {
     if (!state) return;
-    $('screen-options').disabled = state.armed || saving;
-    $('screen-save').disabled = state.armed || saving;
+    $('screen-options').disabled = saving;
+    $('screen-save').disabled = saving;
   }
   $('screen-form').addEventListener('change', () => {dirty=true; $('screen-summary').textContent='Unsaved screen selection';});
   $('screen-reset').addEventListener('click', () => {dirty=false; render();});
   $('screen-form').addEventListener('submit', e => {
     e.preventDefault();
     run(async () => {
-      requireHeld();
       const ids = new Set([...$('screen-options').querySelectorAll('input:checked')].map(el=>el.value));
-      const draft = structuredClone(show);
-      for (const b of draft.blocks) b.on_screen=ids.has(b.id);
       saving=true; update();
       try {
-        const result = await api('config', {show:draft, revision:editRevision});
+        const result = await api('screen-selection', {block_ids:[...ids], revision:editRevision});
         show=result.show; revision=result.revision; dirty=false;
         renderConfig(); render(); toast('Slate home screen updated');
       } finally {saving=false; update();}

@@ -17,6 +17,7 @@ try:
 except ImportError:  # OpenWrt's split stdlib omits this desktop-only helper.
     webbrowser = None
 from .engine import Engine, Conflict
+from . import __version__
 from .model import number
 from .network import interfaces
 
@@ -139,6 +140,8 @@ class Handler(BaseHTTPRequestHandler):
                     result = engine.save(data.get('show'), data.get('revision'))
                 elif path == '/api/capture':
                     result = engine.capture(data.get('block_id'), data.get('endpoint'), data.get('revision'))
+                elif path == '/api/screen-selection':
+                    result = engine.select_screen_blocks(data.get('block_ids'), data.get('revision'))
                 elif path == '/api/action':
                     action = data.get('action')
                     if action == 'start_psn': engine.start_input()
@@ -191,12 +194,12 @@ def main():
         raise SystemExit(f'Cannot start portal: {exc}. Try --port 8081.')
     port = server.server_address[1]
     host = '127.0.0.1' if args.host == '0.0.0.0' else args.host
-    print(f'\nAxisBridge 0.1.0\nPortal: http://{host}:{port}\nAccess key: {key}\n')
+    print(f'\nAxisBridge {__version__}\nPortal: http://{host}:{port}\nAccess key: {key}\n')
     if args.host == '0.0.0.0':
         for adapter in interfaces():
             if adapter['up'] and adapter['ip'] != '127.0.0.1':
                 print(f"LAN portal: http://{adapter['ip']}:{port}")
-    print('\nSaved auto-connect settings are restored automatically. Output always starts held.\nCtrl+C stops the app.\n', flush=True)
+    print('\nSaved auto-connect and MA auto-enable settings are restored automatically.\nCtrl+C stops the app.\n', flush=True)
     if not args.no_browser and webbrowser is not None:
         threading.Timer(0.5, lambda: webbrowser.open(f'http://{host}:{port}/#key={key}')).start()
     try:

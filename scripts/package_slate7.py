@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import runpy
 from pathlib import Path
 import shutil
 import tarfile
@@ -10,7 +11,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "slate7"
-OUTPUT = ROOT / "downloads" / "AxisBridge-Slate7-Installer-v0.1.0.tar.gz"
+VERSION = runpy.run_path(str(ROOT / 'axisbridge/__init__.py'))['__version__']
+OUTPUT = ROOT / "downloads" / f"AxisBridge-Slate7-Installer-v{VERSION}.tar.gz"
 ARCHIVE_ROOT = "AxisBridge-Slate7-Installer"
 
 

@@ -155,7 +155,7 @@ class MAConnection:
             if ready:
                 data = s.recv(16384)
                 if not data:
-                    raise OSError('Console disconnected; output held. Re-arm after reconnecting.')
+                    raise OSError('Console disconnected; waiting for MA login')
                 plain, reply = decoder.feed(data)
                 if reply:
                     s.sendall(reply)

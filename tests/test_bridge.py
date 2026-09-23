@@ -265,6 +265,32 @@ class EngineTests(unittest.TestCase):
         commands=self.e.pending_commands(11)
         self.assertAlmostEqual(commands[0][1],63.21,places=2)
 
+    def test_auto_output_only_on_new_authenticated_connection(self):
+        self.e.show['network']['auto_arm_ma'] = True
+        self.sample(5, 10)
+        for state in ('connecting', 'authenticating', 'error'):
+            self.e.ma_status(state, state)
+            self.assertFalse(self.e.armed)
+            self.assertEqual(self.e.pending_commands(10), [])
+        self.e.ma_status('ready', 'Logged in')
+        self.assertTrue(self.e.armed)
+        self.assertEqual(len(self.e.pending_commands(10)), 2)
+        self.e.disarm()
+        self.e.ma_status('ready', 'Still logged in')
+        self.assertFalse(self.e.armed)
+        self.e.ma_status('connecting', 'Reconnecting')
+        self.e.ma_status('ready', 'Logged in again')
+        self.assertTrue(self.e.armed)
+        self.assertEqual(self.e.pending_commands(20), [])  # Stale input never sends.
+
+    def test_auto_output_does_not_require_every_block_to_be_ready(self):
+        self.e.show['network']['auto_arm_ma'] = True
+        self.e.show['blocks'].append(block(id='missing', tracker_id=99, targets=['1.3']))
+        self.sample(5, 10)
+        self.e.ma_status('ready', 'Logged in')
+        self.assertTrue(self.e.armed)
+        self.assertEqual([c[0] for c in self.e.pending_commands(10)], ['1.1', '2.15'])
+
 
 class MockConsole:
     def __init__(self, reject=False):
@@ -307,6 +333,29 @@ class MockConsole:
 
 
 class NetworkIntegrationTests(unittest.TestCase):
+    def test_auto_output_on_login_and_reconnect(self):
+        with tempfile.TemporaryDirectory() as directory:
+            console = MockConsole(); e = Engine(directory)
+            try:
+                show = default_show()
+                show['blocks'] = [block(source='demo', tracker_id=1, targets=['1.1'])]
+                show['network'].update(ma_interface='127.0.0.1', ma_host='127.0.0.1',
+                                       ma_port=console.port, ma_user='bridge', auto_arm_ma=True)
+                e.save(show, e.revision); e.set_demo(True)
+                e.connect_ma('test')
+                wait_for(lambda: 'Fader 1.1 At 0.00' in console.commands)
+                self.assertTrue(e.armed)
+                e.set_demo_level(1, 50)
+                wait_for(lambda: 'Fader 1.1 At 50.00' in console.commands)
+                console.client.shutdown(socket.SHUT_RDWR)
+                wait_for(lambda: not e.armed)
+                count = len(console.commands)
+                wait_for(lambda: e.armed, timeout=5)
+                wait_for(lambda: len(console.commands) > count)
+                self.assertEqual(console.commands[-1], 'Fader 1.1 At 50.00')
+            finally:
+                e.close(); console.close()
+
     def test_demo_to_tcp_output(self):
         with tempfile.TemporaryDirectory() as directory:
             console=MockConsole();e=Engine(directory)
@@ -388,7 +437,7 @@ class NetworkIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             c=MockConsole(reject=True);e=Engine(directory)
             try:
-                show=default_show();show['network'].update(ma_interface='127.0.0.1',ma_host='127.0.0.1',ma_port=c.port,ma_user='bridge')
+                show=default_show();show['network'].update(ma_interface='127.0.0.1',ma_host='127.0.0.1',ma_port=c.port,ma_user='bridge',auto_arm_ma=True)
                 e.save(show,e.revision);e.connect_ma('bad')
                 wait_for(lambda:e.ma_state=='error')
                 self.assertEqual(c.commands,[]);self.assertFalse(e.armed)
@@ -440,6 +489,23 @@ class PortalTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code,400)
         for path in ('/','/app.js','/style.css','/status.css'):
             with self.request(path) as r:self.assertEqual(r.status,200)
+
+    def test_screen_selection_endpoint_is_authenticated_and_allowed_live(self):
+        self.e.save(dict(default_show(), blocks=[block()]), self.e.revision)
+        data = {'block_ids': ['block1'], 'revision': self.e.revision}
+        with self.assertRaises(HTTPError) as ctx:
+            self.request('/api/screen-selection', data)
+        self.assertEqual(ctx.exception.code, 401)
+        self.login(); self.e.armed = True
+        with self.assertRaises(HTTPError) as ctx:
+            self.request('/api/screen-selection', data, origin='http://evil.example')
+        self.assertEqual(ctx.exception.code, 403)
+        with self.request('/api/screen-selection', data) as r:
+            self.assertTrue(json.load(r)['show']['blocks'][0]['on_screen'])
+        self.assertTrue(self.e.armed)
+        with self.assertRaises(HTTPError) as ctx:
+            self.request('/api/screen-selection', data)
+        self.assertEqual(ctx.exception.code, 409)
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

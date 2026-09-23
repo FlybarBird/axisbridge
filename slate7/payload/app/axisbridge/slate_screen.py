@@ -92,8 +92,9 @@ class Canvas:
 
 
 def touch_position(raw_x, raw_y):
-    # Rotate the GL.iNet input calibration 180 degrees with the display.
-    return raw_y, HEIGHT - 1 - raw_x
+    # The physical sensor's horizontal axis is mirrored relative to the upright
+    # display. Raw Y decreases left-to-right; raw X decreases top-to-bottom.
+    return WIDTH - 1 - raw_y, HEIGHT - 1 - raw_x
 
 
 class HoldControl:
@@ -136,6 +137,45 @@ class HoldControl:
 
     def progress(self, now):
         return min(1, max(0, (now - self.started) / HOLD_SECONDS)) if self.target else 0
+
+
+class TouchInput:
+    """Decode complete evdev frames, including Slate firmware's contact IDs.
+
+    Its CST816X driver emits ABS_MT_TRACKING_ID 0/-1 for down/up but never
+    releases BTN_TOUCH. It has no MT slots, so EVIOCGABS(57) is not a reliable
+    contact snapshot either. Consume the actual tracking events, as LVGL does.
+    """
+    def __init__(self, hold, tracking, raw_x=0, raw_y=0, down=False):
+        self.hold, self.tracking = hold, tracking
+        self.raw_x, self.raw_y, self.down = raw_x, raw_y, down
+        self.hold.down = down
+        self.dropped = False
+
+    def feed(self, kind, code, value, now, revision):
+        if kind == 0 and code == 3:  # SYN_DROPPED: never commit uncertain input.
+            self.hold.cancel()
+            self.hold.down = self.down = True
+            self.dropped = True
+        elif self.dropped:
+            if kind == 0 and code == 0:
+                self.dropped = False
+        elif kind == 3 and code in (0, 1):
+            if code == 0:
+                self.raw_x = value
+            else:
+                self.raw_y = value
+        elif self.tracking and kind == 3 and code == 57:
+            self.down = value >= 0
+        elif not self.tracking and kind == 1 and code == 330:
+            self.down = bool(value)
+        elif kind == 0 and code == 0:
+            self.hold.pointer(self.down, *touch_position(self.raw_x, self.raw_y), now, revision)
+
+
+def capture_message(capture):
+    label = 'LOW' if capture['endpoint'] == 'bottom' else 'HIGH'
+    return f"{label}: {len(capture['updated'])} SAVED / {len(capture['skipped'])} SKIPPED"
 
 
 def render(snapshot, hold, now, message=''):
@@ -224,11 +264,14 @@ class SlateScreen:
         def pressed():
             keys = fcntl.ioctl(touch, 0x80604518, bytes(96))
             return bool(keys[330 // 8] & (1 << (330 % 8)))
-        down = pressed()
-        hold.down = down  # A finger already on the screen cannot start a hold.
+        axes = fcntl.ioctl(touch, 0x80084523, bytes(8))  # EVIOCGBIT(EV_ABS)
+        tracking = bool(axes[57 // 8] & (1 << (57 % 8)))
+        pointer = TouchInput(hold, tracking, raw_x, raw_y, False if tracking else pressed())
+        print('Slate touch input: ' + ('tracking IDs' if tracking else 'BTN_TOUCH'), flush=True)
         data = b''
         message, message_until, last_draw = '', 0, 0
         last_frame = None
+        last_target = None
         while not self.closed.is_set():
             ready, _, _ = select.select([touch], [], [], 0.02)
             snapshot = self.engine.screen_snapshot()
@@ -244,30 +287,28 @@ class SlateScreen:
                 while len(data) >= event.size:
                     _, _, kind, code, value = event.unpack(data[:event.size])
                     data = data[event.size:]
-                    if kind == 3 and code == 0:
-                        raw_x = value
-                    elif kind == 3 and code == 1:
-                        raw_y = value
-                    elif kind == 1 and code == 330:
-                        down = bool(value)
-                    elif kind == 0 and code == 3:  # SYN_DROPPED
-                        hold.cancel(); hold.down = True
-                    elif kind == 0 and code == 0:
-                        hold.pointer(down, *touch_position(raw_x, raw_y), time.monotonic(), snapshot['revision'])
-            # Also inspect the kernel's current contact state before any commit.
-            if not pressed():
+                    pointer.feed(kind, code, value, time.monotonic(), snapshot['revision'])
+            # Single-touch drivers can also be checked via EVIOCGKEY. Slate's
+            # latched key must not override its authoritative tracking release.
+            if not tracking and not pressed():
                 hold.pointer(False, 0, 0, time.monotonic(), snapshot['revision'])
             now = time.monotonic()
-            if snapshot['armed']:
-                hold.cancel()
+            if hold.target != last_target:
+                if hold.target:
+                    self.engine.log('Slate touch: holding ' + ('LOW' if hold.target == 'bottom' else 'HIGH'))
+                elif last_target:
+                    self.engine.log('Slate touch: hold cancelled')
+                last_target = hold.target
             endpoint = hold.advance(now, snapshot['revision'])
             if endpoint:
+                last_target = None
                 try:
                     with self.engine.operation_lock:
-                        self.engine.capture_screen(endpoint, hold.revision)
-                    message = ('LOW' if endpoint == 'bottom' else 'HIGH') + f" SAVED - {len(snapshot['blocks'])} BLOCKS"
+                        result = self.engine.capture_screen(endpoint, hold.revision)
+                    message = capture_message(result['capture'])
                 except (ValueError, OSError) as exc:
                     message = str(exc)
+                    self.engine.log('Slate capture not applied: ' + message)
                 message_until = time.monotonic() + 4
                 snapshot = self.engine.screen_snapshot()
             if now - last_draw >= 0.1:

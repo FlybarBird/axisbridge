@@ -101,7 +101,7 @@ class Engine:
         if network['auto_connect_ma'] and all(network[k] for k in ('ma_interface', 'ma_host', 'ma_user')):
             try:
                 self.connect_ma(None)
-                self.log('MA auto-connect started; output remains held')
+                self.log('MA auto-connect started')
             except (OSError, ValueError) as exc:
                 self.ma_status('error', 'Automatic MA connection failed: ' + str(exc))
 
@@ -120,7 +120,7 @@ class Engine:
             if retry_ma:
                 try:
                     self.connect_ma(None)
-                    self.log('MA auto-connect restarted; output remains held')
+                    self.log('MA auto-connect restarted')
                 except (OSError, ValueError) as exc:
                     self.ma_status('error', 'Automatic MA connection failed: ' + str(exc))
 
@@ -136,10 +136,16 @@ class Engine:
 
     def ma_status(self, state, message):
         with self.lock:
+            previous_state = self.ma_state
             changed = state != self.ma_state or message != self.ma_message
             self.ma_state, self.ma_message = state, message
             if state != 'ready':
                 self.disarm()
+            elif previous_state != 'ready' and self.show['network']['auto_arm_ma']:
+                self.last_sent.clear()
+                self.smoothed.clear()
+                self.armed = True
+                self.log('MA authenticated; output enabled automatically')
             if changed:
                 self.log(message)
 
@@ -252,7 +258,7 @@ class Engine:
                 raise Conflict('Show changed in another window. Reload before saving.')
             if self.armed:
                 raise Conflict('Hold output before changing the show.')
-            transport_keys = set(clean['network']) - {'auto_start_psn', 'auto_connect_ma'}
+            transport_keys = set(clean['network']) - {'auto_start_psn', 'auto_connect_ma', 'auto_arm_ma'}
             changed_network = any(clean['network'][key] != self.show['network'][key] for key in transport_keys)
             if changed_network and (self.receiver or self.ma):
                 raise Conflict('Stop PSN and disconnect MA before changing network settings.')
@@ -283,20 +289,39 @@ class Engine:
             self.log(f"Captured {endpoint} for {row['name']}: {state['value']:.5f}")
             return result
 
+    def select_screen_blocks(self, block_ids, revision):
+        with self.lock:
+            if revision != self.revision:
+                raise Conflict('Show changed. Reset screen edits before saving.')
+            if not isinstance(block_ids, list) or any(not isinstance(i, str) for i in block_ids):
+                raise ValueError('Choose a list of block IDs')
+            ids = set(block_ids)
+            if len(ids) != len(block_ids) or ids - {b['id'] for b in self.show['blocks']}:
+                raise ValueError('Unknown or duplicate screen block')
+            draft = copy.deepcopy(self.show)
+            for row in draft['blocks']:
+                row['on_screen'] = row['id'] in ids
+            atomic_json(self.path, draft)
+            self.show = draft
+            self.revision += 1
+            self.log(f'Slate screen selection saved: {len(ids)} blocks')
+            return self.config()
+
     def capture_screen(self, endpoint, revision):
-        """Commit every selected endpoint together, or change none of them."""
+        """Atomically capture selected endpoints, skipping unchanged blocks."""
         with self.lock:
             if endpoint not in ('bottom', 'top'):
                 raise ValueError('Choose bottom or top')
             if revision != self.revision:
                 raise Conflict('Selection changed. Hold again.')
-            if self.armed:
-                raise Conflict('Hold output in the portal first')
             rows = [b for b in self.show['blocks'] if b['on_screen']]
             if not rows:
                 raise ValueError('Select blocks in the portal')
             draft = copy.deepcopy(self.show)
             now = time.monotonic()
+            updated, skipped = [], []
+            label = 'Low' if endpoint == 'bottom' else 'High'
+            opposite_label = 'High' if endpoint == 'bottom' else 'Low'
             for row in rows:
                 if not row['enabled']:
                     raise ValueError(row['name'] + ': block disabled')
@@ -305,10 +330,29 @@ class Engine:
                     raise ValueError(row['name'] + ': no fresh signal')
                 opposite = row['top' if endpoint == 'bottom' else 'bottom']
                 if opposite is not None and abs(opposite - state['value']) < 1e-9:
-                    raise ValueError(row['name'] + ': low and high must differ')
+                    skipped.append({'id': row['id'], 'name': row['name'], 'reason': 'still at ' + opposite_label})
+                    continue
+                if row[endpoint] is not None and abs(row[endpoint] - state['value']) < 1e-9:
+                    skipped.append({'id': row['id'], 'name': row['name'], 'reason': label + ' unchanged'})
+                    continue
                 next(b for b in draft['blocks'] if b['id'] == row['id'])[endpoint] = state['value']
-            result = self.save(draft, revision)
-            self.log(f"Slate screen: captured {endpoint} for {len(rows)} selected blocks")
+                updated.append(row)
+            # Calibration is allowed while live. The same lock covers the output
+            # worker's send, so it cannot use a partly updated selected group.
+            if updated:
+                clean = validate_show(draft)
+                atomic_json(self.path, clean)
+                self.show = clean
+                self.revision += 1
+                for row in updated:
+                    self.smoothed.pop(row['id'], None)
+                    for target in row['targets']:
+                        self.last_sent.pop(target, None)
+            result = self.config()
+            result['capture'] = {'endpoint': endpoint, 'updated': [row['id'] for row in updated], 'skipped': skipped}
+            detail = '; '.join(row['name'] + ': ' + row['reason'] for row in skipped)
+            self.log(f"Slate screen: captured {endpoint} for {len(updated)} selected blocks; skipped {len(skipped)}"
+                     + (' (' + detail + ')' if detail else ''))
             return result
 
     def screen_snapshot(self):
@@ -319,8 +363,7 @@ class Engine:
             fresh = any(now - t <= self.show['network']['timeout_ms'] / 1000
                         for e in self.entities.values() if e['source'] != 'demo'
                         for t in e['times'].values())
-            reason = ('Hold output in the portal' if self.armed else
-                      'Select blocks in Slate screen' if not rows else '')
+            reason = 'Select blocks in Slate screen' if not rows else ''
             if not reason:
                 for b in rows:
                     if not b['enabled']:

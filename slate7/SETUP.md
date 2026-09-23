@@ -2,7 +2,7 @@
 
 **Target:** GL.iNet Slate 7 **GL-BE3600**, running GL.iNet/OpenWrt firmware with `procd` and a firmware-compatible **Python 3.10+** package.
 
-Package version: **0.1.0-slate7.7**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
+Package version: **0.1.1**. Includes the complete AxisBridge 0.1.1 bridge and web portal. No separate app download is required.
 
 This is a shell installer archive for SSH installation. It is **not router firmware** and must **not** be uploaded through the router's Firmware Upgrade page. An `.ipk` is not supplied because the installed firmware/package format and dependency versions have not been provided. The installer detects `opkg` or `apk` and uses only the router's existing package feeds.
 
@@ -20,19 +20,19 @@ axisbridge-ctl restart
 
 In the portal, open **Slate screen**, choose the blocks to include, and save. No blocks are selected automatically. The chosen names and positions cycle along the bottom of the hardware screen. Both buttons apply to the entire selected group. A continuous **four-second hold** shows a countdown and progress bar; release or slide off to cancel. A completed hold applies once, with a new release required before another capture. Low maps to 0%, High to 100%.
 
-Output must be held. Every selected block must be enabled with a fresh axis sample, and low/high must differ. If any selected block fails these checks, nothing is changed. Selection changes during a hold cancel it. Status boxes distinguish PSN LIVE (fresh traffic), WAIT (listening without fresh data), DEMO, and OFF; MA LIVE means authenticated.
+Low/High can be updated while output is live or held, and even while MA is disconnected. **Both buttons skip unchanged blocks**, leaving their calibration unchanged and saving the other selected blocks together. High skips blocks still at Low or already at their saved High; Low skips blocks still at High or already at their saved Low. The screen reports saved/skipped counts; if every block is skipped, nothing is written or reset. Every selected block must still be enabled with a fresh axis sample; a disabled or stale block prevents the capture. No capture may create equal low/high endpoints. New ranges apply immediately to live output, without resetting skipped blocks' output. Screen block selections can also change while live; changing the selection during a hold cancels it. Status boxes distinguish PSN LIVE (fresh traffic), WAIT (listening without fresh data), DEMO, and OFF; MA LIVE means authenticated.
 
-The screen uses the firmware's existing framebuffer/touch drivers. The original GL.iNet screen is restored when AxisBridge stops, including a normal uninstall. To keep the stock screen, set `screen_enabled='0'`, commit, and restart AxisBridge. Display geometry follows [GL.iNet's gl-lvgl implementation](https://github.com/gl-inet/gl-lvgl/blob/main/patches/03-fix-gl-lcd-init.patch), with the home screen and touch coordinates rotated together for the router's upright viewing orientation.
+The screen uses the firmware's existing framebuffer/touch drivers. The original GL.iNet screen is restored when AxisBridge stops, including a normal uninstall. To keep the stock screen, set `screen_enabled='0'`, commit, and restart AxisBridge. Display geometry follows [GL.iNet's gl-lvgl implementation](https://github.com/gl-inet/gl-lvgl/blob/main/patches/03-fix-gl-lcd-init.patch). The home screen is rotated upright, with a separate touch calibration for the physical sensor's mirrored horizontal axis.
 
 ### Install the bridge
 
 Keep the router connected to the internet for the first install if it needs Python. Keep it off the show networks until its network configuration is complete.
 
-1. Download `AxisBridge-Slate7-Installer-v0.1.0.tar.gz` to your computer.
+1. Download `AxisBridge-Slate7-Installer-v0.1.1.tar.gz` to your computer.
 2. Upload it to `/tmp/` on the router using an SFTP/SCP client such as WinSCP, or use this command with your router's IP:
 
 ```sh
-scp AxisBridge-Slate7-Installer-v0.1.0.tar.gz root@192.168.8.1:/tmp/
+scp AxisBridge-Slate7-Installer-v0.1.1.tar.gz root@192.168.8.1:/tmp/
 ```
 
 If your router does not provide an SFTP subsystem and your OpenSSH client supports it, use `scp -O` for legacy SCP. `192.168.8.1` is an example; use your current router address.
@@ -42,7 +42,7 @@ If your router does not provide an SFTP subsystem and your OpenSSH client suppor
 ```sh
 ssh root@192.168.8.1
 cd /tmp
-tar -xzf AxisBridge-Slate7-Installer-v0.1.0.tar.gz
+tar -xzf AxisBridge-Slate7-Installer-v0.1.1.tar.gz
 cd AxisBridge-Slate7-Installer
 sh install.sh --check
 ```
@@ -128,13 +128,13 @@ These are configuration requirements, not instructions to blindly apply a generi
 1. In **Network**, enter the PSN-side local IPv4, receive mode, port, group, and optional Raynok source filter.
 2. Enter the MA-side local IPv4, console IP, TCP port 30000, and MA username. Adapter IPs can be entered manually; `psutil` is optional and not required by this installer.
 3. On grandMA2 enable **Setup → Console → Global Settings → Telnet → Login Enabled**.
-4. Save network settings, start PSN, and connect MA using a user with playback rights. Leave the two auto-connect checkboxes enabled to restore both connections after a service restart.
+4. Save network settings, start PSN, and connect MA using a user with playback rights. Leave the two auto-connect checkboxes enabled to restore both connections after a service restart. For unattended operation, also enable **Enable output automatically after MA login**.
 5. Add control blocks, choose an entity/axis, assign `page.executor` targets, and capture bottom/top.
-6. Arm output when ready.
+6. With automatic output enabled, fresh calibrated blocks start sending after MA login without a browser or portal login. Otherwise arm output when ready.
 
 The program controls grandMA2 through Telnet over the selected adapter. It does not join an MA-Net2 session. Monitor values labeled **Last sent** are commands sent, not console fader readback.
 
-The service starts automatically after boot and restarts after a crash, with a limited retry policy. With auto-connect enabled, it starts PSN and reconnects MA from the saved settings; unavailable adapters are retried automatically. The MA password is kept separately at `/etc/axisbridge/ma-password.txt` with owner-only permissions and is not included in shows or exports. **Every new process still starts with output held.** An operator must arm output after every restart, so booting the router cannot move a fader unattended.
+The service starts automatically after boot and restarts after a crash, with a limited retry policy. With auto-connect enabled, it starts PSN and reconnects MA from the saved settings; unavailable adapters are retried automatically. The MA password is kept separately at `/etc/axisbridge/ma-password.txt` with owner-only permissions and is not included in shows or exports. **Automatic output enables sending after each successful MA login, including after reboot or reconnection.** Only enabled, calibrated blocks with fresh data and assigned targets send. No browser or portal login is required for normal operation. Manual Hold remains effective until the next MA login or manual arming. New installations default to manual output until the automatic option is explicitly saved.
 
 ## Manage the service
 

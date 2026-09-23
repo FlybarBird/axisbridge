@@ -20,7 +20,7 @@ DATA=Path('/etc/axisbridge')
 SERVICE=Path('/etc/init.d/axisbridge')
 SETTINGS=Path('/etc/config/axisbridge')
 CONTROL=Path('/usr/bin/axisbridge-ctl')
-VERSION='0.1.0-slate7.7'
+VERSION='0.1.1'
 
 
 def is_slate7_model(value):
@@ -198,7 +198,7 @@ def install(port,bind):
             health_check(port,bind)
         print('AxisBridge installed. Show and portal key are stored in /etc/axisbridge.',flush=True)
         print(f'Open http://<router-LAN-IP>:{port} and run axisbridge-ctl key to see the access key.')
-        print('Use axisbridge-ctl status or axisbridge-ctl logs. Output starts held.')
+        print('Use axisbridge-ctl status or axisbridge-ctl logs. Output follows the saved MA auto-enable setting.')
         print('Networking/firewall/DHCP settings are unchanged. Follow SETUP.md before connecting show networks.')
     except Exception:
         if swapped:

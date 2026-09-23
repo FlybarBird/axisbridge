@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import runpy
 import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "downloads" / "AxisBridge-v0.1.0.zip"
+VERSION = runpy.run_path(str(ROOT / 'axisbridge/__init__.py'))['__version__']
+OUTPUT = ROOT / "downloads" / f"AxisBridge-v{VERSION}.zip"
 PREFIX = Path("AxisBridge")
 TOP_LEVEL = (
     "README.md",

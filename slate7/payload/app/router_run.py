@@ -37,7 +37,7 @@ def main():
             from axisbridge.slate_screen import SlateScreen
             screen=SlateScreen(engine)
             screen.start()
-        print(f'AxisBridge portal listening on {args.host}:{args.port}; output held.',flush=True)
+        print(f'AxisBridge portal listening on {args.host}:{args.port}; saved auto-connect/output settings active.',flush=True)
         server.serve_forever(poll_interval=0.2)
     finally:
         if screen: screen.close()

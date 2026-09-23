@@ -1,4 +1,4 @@
-# AxisBridge 0.1.0
+# AxisBridge 0.1.1
 
 PSN position data from Raynok → calibrated grandMA2 fader levels, with a web portal for setup and monitoring. Runs on macOS, Windows, and Raspberry Pi OS using Python 3.10 or newer. The bridge runs locally; no cloud or internet connection is needed during use.
 
@@ -95,9 +95,9 @@ This moves the executor's assigned fader function. Configure Master/Temp/Speed a
 - Output defaults to **25 Hz**, adjustable from 1 to 40 Hz. Deadband defaults to 0.1 percentage points. Commands are sent when values change enough, at exact endpoints, and every ten seconds while fresh to maintain ownership. Only current positions are sent; there is no motion queue to replay after a disconnect.
 - Optional smoothing is an exponential response in milliseconds; 0 disables it. A setting of 100 ms reaches about 63% of a sudden change after 100 ms. The initial/re-armed output starts at the current mapped position.
 - Missing/stale axes hold their last commanded console value and stop sending for that block. The default freshness timeout is 1000 ms. Name/info packets do not keep old position samples alive. Output resumes at the current position when that axis becomes fresh again while the bridge remains armed.
-- **Hold output** stops sending fader commands without forcing faders to zero. The desk is then available for manual control. Editing or recapturing requires Hold.
+- **Hold output** stops sending fader commands without forcing faders to zero. General show edits require Hold; the Slate hardware Low/High captures and screen-block selection can be changed while output stays live.
 - A console disconnect/error disarms all output. The app reconnects, but you must re-arm before faders follow again. PSN receiver failure also disarms output.
-- Startup restores the saved show and, when enabled, automatically starts PSN and reconnects MA. Output always remains held, so starting after reboot never automatically moves a fader.
+- Startup restores the saved show and, when enabled, automatically starts PSN and reconnects MA. The optional **Enable output automatically after MA login** setting enables fresh, calibrated blocks after each successful login, including reconnections. This supports operation without a browser or web login. With the option off, output remains held until manually armed.
 - Save changes in the portal to persist them automatically at `/etc/axisbridge/current-show.json`. **Export show** downloads a portable JSON file; **Import** loads one. Passwords, portal keys, arm state, and live samples are excluded. The separate owner-only password file is local to this bridge. Concurrent edits from two browsers are rejected rather than silently overwriting each other.
 - This version permits 128 blocks and 64 targets per block. Console throughput must be measured with your actual assignment count before use.
 
