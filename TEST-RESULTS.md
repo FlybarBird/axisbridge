@@ -17,13 +17,16 @@ Local regression tests verified on 2026-09-23. Earlier browser/layout checks are
 - Live demo-to-MA output, owner-only password persistence, and saved PSN/MA auto-connect settings.
 - Physical Slate 7 contact/release handling, corrected button mapping, four-second holds, early cancellation, and live capture. Both selective Low/High skip paths passed isolated installed-code checks without changing the live show.
 - Real MA authentication and demo fader command transport on the configured router network. Reported packet counters during demo are simulated input, not proof of a Raynok sender.
-- Native Intel Mac and Windows release builds are verified separately before publication.
+- [Native desktop build 35921803227](https://github.com/FlybarBird/axisbridge/actions/runs/35921803227) passed on Intel macOS and Windows x64 at runtime-source commit `4fd4a213a69cee3813fd12649cb047716904601d`: all 59 application tests passed on each platform, along with six native Mac launcher key-parsing cases and the Windows executable `--help` smoke check.
+- Downloaded desktop archives passed their SHA-256 and ZIP integrity checks. Both Mac executables are x86_64, the app reports version 0.1.1/build 3, and its ad-hoc signature passes deep/strict verification. The Windows executable is PE32+ x86-64.
+
+The final Windows build initially encountered a localhost connection-abort error in the rejected-origin API test. One retry of the failed job passed with unchanged source and no disabled tests. Final release packaging changes only documentation and generated archives after the tested runtime-source commit.
 
 ## Not verified here
 
 - Actual Raynok output, its version/configuration, units, and field availability.
 - Console fader/parameter readback, executor options, and physical fader movement. MA authentication and transmitted commands are not proof of resulting console state.
-- macOS, Windows, or Raspberry Pi hardware and their network drivers/firewalls.
+- End-to-end operation on users' macOS, Windows, or Raspberry Pi hardware, including network drivers/firewalls; native desktop CI checks are listed above.
 - Apple notarization, Authenticode signing, or signed installers.
 - Sustained load with the maximum permitted number of blocks/targets.
 
