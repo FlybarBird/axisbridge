@@ -339,7 +339,9 @@ class NetworkIntegrationTests(unittest.TestCase):
                 send(7.5);wait_for(lambda:'Fader 1.1 At 75.00' in console.commands)
                 e.disarm();count=len(console.commands);send(9);time.sleep(0.12)
                 self.assertEqual(len(console.commands),count)
-                e.arm();console.client.shutdown(socket.SHUT_RDWR)
+                # Refresh the deliberately short-lived sample before testing disconnect.
+                # Slow CI hosts can otherwise cross the 200 ms freshness boundary here.
+                send(8.5);e.arm();console.client.shutdown(socket.SHUT_RDWR)
                 wait_for(lambda:not e.armed)
                 count=len(console.commands)
                 wait_for(lambda:e.ma_state=='ready', timeout=5)
