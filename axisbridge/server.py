@@ -12,7 +12,10 @@ import socket
 import sys
 import threading
 from urllib.parse import urlparse
-import webbrowser
+try:
+    import webbrowser
+except ImportError:  # OpenWrt's split stdlib omits this desktop-only helper.
+    webbrowser = None
 from .engine import Engine, Conflict
 from .model import number
 from .network import interfaces
@@ -181,7 +184,7 @@ def main():
             if adapter['up'] and adapter['ip'] != '127.0.0.1':
                 print(f"LAN portal: http://{adapter['ip']}:{port}")
     print('\nSaved auto-connect settings are restored automatically. Output always starts held.\nCtrl+C stops the app.\n', flush=True)
-    if not args.no_browser:
+    if not args.no_browser and webbrowser is not None:
         threading.Timer(0.5, lambda: webbrowser.open(f'http://{host}:{port}/#key={key}')).start()
     try:
         server.serve_forever(poll_interval=0.2)

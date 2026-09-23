@@ -1,6 +1,6 @@
 # Slate 7 installer verification
 
-Package: 0.1.0-slate7.3. Development checks completed 2026-09-23.
+Package: 0.1.0-slate7.4. Development checks completed 2026-09-23.
 
 - 11 installer tests passed: production Slate 7 model/board identifiers, private atomic writes, checksums/tamper detection, unlisted payload rejection, port collision, wrong-platform rejection, fresh installation, rollback, and failed-upgrade restoration of the previous app/service/configuration.
 - Full deployment tests used temporary filesystem paths and mocked procd/service calls; they did not modify a router.

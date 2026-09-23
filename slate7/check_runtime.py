@@ -7,7 +7,7 @@ try:
     import argparse, collections, dataclasses, hashlib, hmac, http.server
     import http.cookies, ipaddress, json, math, mimetypes, os, pathlib
     import re, secrets, select, shutil, signal, socket, struct, subprocess
-    import tempfile, threading, time, urllib.request, webbrowser
+    import tempfile, threading, time, urllib.request
 except ImportError as exc:
     print('Incomplete Python standard library: ' + str(exc))
     sys.exit(1)
