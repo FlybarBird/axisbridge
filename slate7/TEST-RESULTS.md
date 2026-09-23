@@ -1,8 +1,8 @@
 # Slate 7 installer verification
 
-Package: 0.1.0-slate7.2. Development checks completed 2026-09-22.
+Package: 0.1.0-slate7.3. Development checks completed 2026-09-23.
 
-- 10 installer tests passed: private atomic writes, checksums/tamper detection, unlisted payload rejection, port collision, wrong-platform rejection, fresh installation, rollback, and failed-upgrade restoration of the previous app/service/configuration.
+- 11 installer tests passed: production Slate 7 model/board identifiers, private atomic writes, checksums/tamper detection, unlisted payload rejection, port collision, wrong-platform rejection, fresh installation, rollback, and failed-upgrade restoration of the previous app/service/configuration.
 - Full deployment tests used temporary filesystem paths and mocked procd/service calls; they did not modify a router.
 - POSIX shell syntax checks passed for the installer, service, and management helper.
 - Running the actual installer preflight on the development host correctly rejected the non-OpenWrt host before installation.

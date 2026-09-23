@@ -11,6 +11,12 @@ spec=importlib.util.spec_from_file_location('deploy',BASE/'deploy.py')
 deploy=importlib.util.module_from_spec(spec);spec.loader.exec_module(deploy)
 
 class InstallerTests(unittest.TestCase):
+    def test_actual_slate7_identifiers_accepted(self):
+        self.assertTrue(deploy.is_slate7_model('GL.iNet BE3600, Inc. IPQ5332/AP-MI04.1-C2'))
+        self.assertTrue(deploy.is_slate7_model('qcom,ipq5332-ap-mi04.1-c2'))
+        self.assertTrue(deploy.is_slate7_model('GL-BE3600'))
+        self.assertFalse(deploy.is_slate7_model('GL-MT3000 Beryl AX'))
+
     def test_atomic_write_replaces_and_sets_private_mode(self):
         with tempfile.TemporaryDirectory() as directory:
             p=Path(directory)/'config';p.write_text('old')

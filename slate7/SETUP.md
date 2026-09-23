@@ -2,7 +2,7 @@
 
 **Target:** GL.iNet Slate 7 **GL-BE3600**, running GL.iNet/OpenWrt firmware with `procd` and a firmware-compatible **Python 3.10+** package.
 
-Package version: **0.1.0-slate7.2**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
+Package version: **0.1.0-slate7.3**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
 
 This is a shell installer archive for SSH installation. It is **not router firmware** and must **not** be uploaded through the router's Firmware Upgrade page. An `.ipk` is not supplied because the installed firmware/package format and dependency versions have not been provided. The installer detects `opkg` or `apk` and uses only the router's existing package feeds.
 

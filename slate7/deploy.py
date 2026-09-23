@@ -20,7 +20,13 @@ DATA=Path('/etc/axisbridge')
 SERVICE=Path('/etc/init.d/axisbridge')
 SETTINGS=Path('/etc/config/axisbridge')
 CONTROL=Path('/usr/bin/axisbridge-ctl')
-VERSION='0.1.0-slate7.2'
+VERSION='0.1.0-slate7.3'
+
+
+def is_slate7_model(value):
+    normalized=value.lower().replace('_','-')
+    return any(marker in normalized for marker in (
+        'gl-be3600', 'gl.inet be3600', 'qcom,ipq5332-ap-mi04.1-c2'))
 
 
 def atomic_write(path, data, mode=0o600):
@@ -57,8 +63,8 @@ def router_guard():
     if not Path('/etc/openwrt_release').is_file():
         raise ValueError('OpenWrt firmware is required')
     model=' '.join(path.read_text(errors='replace').replace('\0','') for path in
-        (Path('/tmp/sysinfo/model'),Path('/tmp/sysinfo/board_name'),Path('/proc/device-tree/model')) if path.exists()).lower().replace('_','-')
-    if 'gl-be3600' not in model:
+        (Path('/tmp/sysinfo/model'),Path('/tmp/sysinfo/board_name'),Path('/proc/device-tree/model')) if path.exists())
+    if not is_slate7_model(model):
         raise ValueError('This package targets Slate 7 GL-BE3600 only')
     if os.geteuid()!=0:raise ValueError('Run as root')
     if not Path('/lib/functions/procd.sh').exists():raise ValueError('procd not found')

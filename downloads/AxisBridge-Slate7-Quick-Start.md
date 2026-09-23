@@ -29,4 +29,4 @@ The package includes the full bridge, automatic service startup, persistent show
 
 Manage it with `axisbridge-ctl status`, `axisbridge-ctl logs`, or `axisbridge-ctl restart`. Remove it with `axisbridge-ctl uninstall`; saved shows and keys remain.
 
-Verified with 10 installer tests and all 31 app tests in development. Physical Slate 7/firmware and Raynok/grandMA2 testing remains outstanding.
+Verified with 11 installer tests and all 31 app tests in development. Installation preflight was also verified against production Slate 7 firmware identifiers. Raynok/grandMA2 hardware testing remains outstanding.

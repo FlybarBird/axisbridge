@@ -30,7 +30,7 @@ if [ -r /proc/device-tree/model ]; then
     MODEL="$MODEL $(tr -d '\000' < /proc/device-tree/model)"
 fi
 case "$MODEL" in
-    *GL-BE3600*|*gl-be3600*|*GL_BE3600*|*gl_be3600*) ;;
+    *GL-BE3600*|*gl-be3600*|*GL_BE3600*|*gl_be3600*|*GL.iNet\ BE3600*|*gl.inet\ be3600*|*qcom,ipq5332-ap-mi04.1-c2*) ;;
     *) fail "Expected Slate 7 GL-BE3600; detected:$MODEL" ;;
 esac
 [ "$(id -u)" -eq 0 ] || fail 'Log in to the router as root.'
