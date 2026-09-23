@@ -19,7 +19,7 @@ from axisbridge.psn import decode, encode_demo, _chunk, PacketError
 from axisbridge.model import default_show, validate_show, normalize
 from axisbridge.engine import Engine, Conflict
 from axisbridge.network import TelnetFilter
-from axisbridge.server import Server
+from axisbridge.server import Server, read_portal_key
 
 
 def block(**kwargs):
@@ -37,6 +37,20 @@ def wait_for(predicate, timeout=3):
             return
         time.sleep(0.01)
     raise AssertionError('Timed out waiting for condition')
+
+
+class PortalKeyTests(unittest.TestCase):
+    def test_intentional_spaces_are_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'portal-key.txt'
+            path.write_text('     ')
+            self.assertEqual(read_portal_key(path), '     ')
+
+    def test_generated_key_newline_is_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'portal-key.txt'
+            path.write_text('generated-key\n')
+            self.assertEqual(read_portal_key(path), 'generated-key')
 
 
 class CalibrationTests(unittest.TestCase):

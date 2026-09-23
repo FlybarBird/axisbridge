@@ -24,6 +24,18 @@ WEB = Path(__file__).resolve().parent / 'web'
 MAX_BODY = 1024 * 1024
 
 
+def read_portal_key(path):
+    """Read one key line while preserving intentional leading/trailing spaces."""
+    key = Path(path).read_text()
+    if key.endswith('\n'):
+        key = key[:-1]
+        if key.endswith('\r'):
+            key = key[:-1]
+    if not key or '\n' in key or '\r' in key:
+        raise ValueError('Portal key must be one non-empty line')
+    return key
+
+
 class Server(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -162,9 +174,10 @@ def main():
     directory.mkdir(parents=True, exist_ok=True)
     key_path = directory / 'portal-key.txt'
     if key_path.exists():
-        key = key_path.read_text().strip()
-        if len(key) < 20:
-            raise SystemExit('Portal key is invalid. Remove portal-key.txt to generate a new one.')
+        try:
+            key = read_portal_key(key_path)
+        except ValueError as exc:
+            raise SystemExit(f'Portal key is invalid: {exc}. Remove portal-key.txt to generate a new one.')
     else:
         key = secrets.token_urlsafe(24)
         fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

@@ -6,7 +6,7 @@ import secrets
 import signal
 import threading
 from axisbridge.engine import Engine
-from axisbridge.server import Server
+from axisbridge.server import Server, read_portal_key
 
 
 def main():
@@ -20,8 +20,8 @@ def main():
     if not path.exists():
         fd=os.open(path, os.O_WRONLY|os.O_CREAT|os.O_EXCL, 0o600)
         with os.fdopen(fd,'w') as stream: stream.write(secrets.token_urlsafe(24)+'\n')
-    key=path.read_text().strip()
-    if len(key)<20: raise SystemExit('Invalid portal key. Restore it from backup.')
+    try: key=read_portal_key(path)
+    except ValueError as exc: raise SystemExit('Invalid portal key: '+str(exc))
     engine=Engine(directory)
     server=None
     try:
