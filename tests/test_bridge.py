@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 import sys
@@ -65,6 +66,8 @@ class CalibrationTests(unittest.TestCase):
         show['network']['ma_interface'] = '0.0.0.0'
         with self.assertRaises(ValueError): validate_show(show)
         show = default_show(); show['version'] = 2
+        with self.assertRaises(ValueError): validate_show(show)
+        show = default_show(); show['network']['auto_start_psn'] = 'yes'
         with self.assertRaises(ValueError): validate_show(show)
 
 
@@ -142,6 +145,10 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.e.pending_commands(10.2), [])
         self.sample(5.001, 10.25, 101)
         self.assertEqual(self.e.pending_commands(10.3), [])
+        self.sample(5.001, 20, 102)
+        self.assertEqual(self.e.pending_commands(20.09), [])
+        self.assertEqual([c[2] for c in self.e.pending_commands(20.1)],
+            ['Fader 1.1 At 50.01', 'Fader 2.15 At 50.01'])
 
     def test_stale_data_holds_and_info_does_not_refresh(self):
         self.sample(5, 10)
@@ -191,11 +198,43 @@ class EngineTests(unittest.TestCase):
         self.e.armed=True
         with self.assertRaises(Conflict): self.e.save(self.e.show, self.e.revision)
 
-    def test_demo_cannot_output(self):
-        self.e.demo=True; self.e.armed=True; self.e.ma_state='ready'
-        self.sample(5,time.monotonic())
-        self.assertEqual(self.e.pending_commands(time.monotonic()), [])
-        with self.assertRaises(ValueError): self.e.arm()
+    def test_password_is_separate_and_owner_only(self):
+        show=default_show();show['network'].update({'ma_interface':'127.0.0.1','ma_host':'127.0.0.1','ma_user':'operator'})
+        self.e.save(show,self.e.revision)
+        with patch('axisbridge.engine.MAConnection'):
+            self.e.connect_ma('     ')
+        self.assertEqual(self.e.password_path.read_text(),'     ')
+        self.assertEqual(self.e.password_path.stat().st_mode & 0o777,0o600)
+        self.assertNotIn('password',json.dumps(self.e.config()['show']))
+
+    def test_saved_show_auto_starts_psn_and_ma_held(self):
+        with tempfile.TemporaryDirectory() as directory:
+            show=default_show();show['network'].update({'psn_interface':'127.0.0.1','ma_interface':'127.0.0.1','ma_host':'127.0.0.1','ma_user':'operator'})
+            Path(directory,'current-show.json').write_text(json.dumps(show))
+            Path(directory,'ma-password.txt').write_text('     ')
+            with patch('axisbridge.engine.PSNReceiver') as receiver, patch('axisbridge.engine.MAConnection') as ma:
+                engine=Engine(directory)
+                try:
+                    receiver.assert_called_once()
+                    ma.assert_called_once()
+                    self.assertEqual(ma.call_args.args[2],'     ')
+                    self.assertFalse(engine.armed)
+                finally:
+                    engine.close()
+
+    def test_demo_requires_ma_and_can_output(self):
+        show=default_show();show['blocks']=[block(source='demo',tracker_id=1)]
+        self.e.save(show,self.e.revision)
+        self.e.set_demo(True)
+        wait_for(lambda:self.e.snapshot()['blocks'][0]['value'] is not None)
+        self.e.set_demo_level(1,37.5)
+        self.assertAlmostEqual(self.e.snapshot()['blocks'][0]['value'],3.75)
+        with self.assertRaises(ValueError):self.e.arm()
+        self.e.ma_state='ready';self.e.arm()
+        commands=self.e.pending_commands(time.monotonic())
+        self.assertEqual([c[2] for c in commands],['Fader 1.1 At 37.50','Fader 2.15 At 37.50'])
+        self.e.disarm()
+        self.assertEqual(self.e.pending_commands(time.monotonic()),[])
 
     def test_smoothing_is_time_based(self):
         self.e.show['blocks'][0]['smoothing_ms']=1000
@@ -247,6 +286,25 @@ class MockConsole:
 
 
 class NetworkIntegrationTests(unittest.TestCase):
+    def test_demo_to_tcp_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            console=MockConsole();e=Engine(directory)
+            try:
+                show=default_show();show['blocks']=[block(source='demo',tracker_id=1,targets=['1.1'])]
+                show['network'].update(ma_interface='127.0.0.1',ma_host='127.0.0.1',ma_port=console.port,ma_user='bridge')
+                e.save(show,e.revision);e.set_demo(True)
+                wait_for(lambda:e.snapshot()['blocks'][0]['value'] is not None)
+                e.connect_ma('test');wait_for(lambda:e.ma_state=='ready')
+                self.assertEqual(console.commands,[])
+                e.arm();wait_for(lambda:'Fader 1.1 At 0.00' in console.commands)
+                e.set_demo_level(1,50)
+                wait_for(lambda:'Fader 1.1 At 50.00' in console.commands)
+                e.disarm();count=len(console.commands)
+                e.set_demo_level(1,75)
+                time.sleep(0.12)
+                self.assertEqual(len(console.commands),count)
+            finally:e.close();console.close()
+
     def test_real_udp_to_tcp_with_two_bound_addresses(self):
         with tempfile.TemporaryDirectory() as directory:
             console=MockConsole();e=Engine(directory);sender=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -357,7 +415,7 @@ class PortalTests(unittest.TestCase):
         self.login()
         with self.assertRaises(HTTPError) as ctx:self.request('/api/config',{'show':None})
         self.assertEqual(ctx.exception.code,400)
-        for path in ('/','/app.js','/style.css'):
+        for path in ('/','/app.js','/style.css','/status.css'):
             with self.request(path) as r:self.assertEqual(r.status,200)
 
 

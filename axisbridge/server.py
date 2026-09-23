@@ -69,7 +69,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
-        if path in ('/', '/app.js', '/style.css', '/favicon.svg'):
+        if path in ('/', '/app.js', '/style.css', '/status.css', '/favicon.svg'):
             filename = 'index.html' if path == '/' else path[1:]
             file = WEB / filename
             if file.exists():
@@ -136,8 +136,7 @@ class Handler(BaseHTTPRequestHandler):
                     elif action == 'demo_level':
                         ident = number(data.get('id'), 'Demo entity', 1, 3, True)
                         level = number(data.get('level'), 'Demo level', 0, 100)
-                        with engine.lock:
-                            engine.demo_levels[ident] = level
+                        engine.set_demo_level(ident, level)
                     else: raise ValueError('Unknown action')
                 else:
                     self.reply(404, {'error': 'Not found'})

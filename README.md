@@ -76,9 +76,9 @@ On grandMA2, enable:
 
 **Setup → Console → Global Settings → Telnet → Login Enabled**
 
-Enter the console/onPC IP, TCP **30000**, and a grandMA2 username with playback rights. Enter its password when connecting. The MA password is held in memory for reconnects, never saved in a show/export, and must be re-entered after app restart or a new Connect operation.
+Enter the console/onPC IP, TCP **30000**, and a grandMA2 username with playback rights. Enter its password when connecting. The MA password is stored separately in `~/AxisBridge/ma-password.txt` with owner-only permissions for automatic reconnect; it is never saved in a show or export.
 
-Click **Save network**, **Start PSN**, then **Connect MA**. Stop PSN and disconnect MA before changing network settings. MA connection attempts automatically retry every three seconds. A successful TCP connection alone is not enough: the bridge waits for a grandMA2 login acknowledgement before allowing output.
+Click **Save network**, **Start PSN**, then **Connect MA** once. With both auto-connect checkboxes enabled, later app launches start PSN and connect MA automatically. Stop PSN and disconnect MA before changing network settings. MA connection attempts automatically retry every three seconds. A successful TCP connection alone is not enough: the bridge waits for a grandMA2 login acknowledgement before allowing output.
 
 **MA network compatibility:** AxisBridge uses grandMA2's documented Telnet command interface over the MA-side adapter. It does not speak the proprietary MA-Net2 session protocol or appear as an MA station. No grandMA2 plugin is required. It controls fader levels, not console parameter licensing. Normal grandMA2/onPC output hardware and licensing requirements still apply.
 
@@ -114,20 +114,20 @@ This moves the executor's assigned fader function. Configure Master/Temp/Speed a
 - The dashboard shows each axis value and its calibrated percentage. With smoothing enabled, this percentage is the unsmoothed target; **Last sent** shows the emitted fader value.
 - Signal Monitor lists source/ID, positions, orientation, freshness, last commands, and connection events. Values are in the source's units.
 - **Last sent** is transport output, **not console fader readback or proof the console applied a command**. A supported login is confirmed; physical fader state is not polled. Last-sent values remain visible after Hold until the show is edited.
-- Output defaults to **25 Hz**, adjustable from 1 to 40 Hz. Deadband defaults to 0.1 percentage points. Commands are sent when values change enough, at exact endpoints, and every two seconds while fresh to maintain ownership. Only current positions are sent; there is no motion queue to replay after a disconnect.
+- Output defaults to **25 Hz**, adjustable from 1 to 40 Hz. Deadband defaults to 0.1 percentage points. Commands are sent when values change enough, at exact endpoints, and every ten seconds while fresh to maintain ownership. Only current positions are sent; there is no motion queue to replay after a disconnect.
 - Optional smoothing is an exponential response in milliseconds; 0 disables it. A setting of 100 ms reaches about 63% of a sudden change after 100 ms. The initial/re-armed output starts at the current mapped position.
 - Missing/stale axes hold their last commanded console value and stop sending for that block. The default freshness timeout is 1000 ms. Name/info packets do not keep old position samples alive. Output resumes at the current position when that axis becomes fresh again while the bridge remains armed.
 - **Hold output** stops sending fader commands without forcing faders to zero. The desk is then available for manual control. Editing or recapturing requires Hold.
 - A console disconnect/error disarms all output. The app reconnects, but you must re-arm before faders follow again. PSN receiver failure also disarms output.
-- Startup restores the saved show but leaves inputs stopped, MA disconnected, and output held. Starting after reboot never automatically moves a fader.
-- Save changes in the portal to persist them automatically at `~/AxisBridge/current-show.json`. **Export show** downloads a portable JSON file; **Import** loads one. Passwords, portal keys, arm state, and live samples are excluded. Concurrent edits from two browsers are rejected rather than silently overwriting each other.
+- Startup restores the saved show and, when enabled, automatically starts PSN and reconnects MA. Output always remains held, so starting after reboot never automatically moves a fader.
+- Save changes in the portal to persist them automatically at `~/AxisBridge/current-show.json`. **Export show** downloads a portable JSON file; **Import** loads one. Passwords, portal keys, arm state, and live samples are excluded. The separate owner-only password file is local to this bridge. Concurrent edits from two browsers are rejected rather than silently overwriting each other.
 - This version permits 128 blocks and 64 targets per block. Console throughput must be measured with your actual assignment count before use.
 
 ## Try the workflow without hardware
 
-Click **Try with demo signals** in an empty show, or **Demo signals** in Signal Monitor. It disconnects MA and stops real PSN input. Three controllable virtual entities appear; their sliders map 0–100 to source positions 0–10. Create a block with source `demo`, select an entity and axis, move its slider to 0 and capture bottom, then move it to 100 and capture top. The calculated percentage will follow the slider.
+Click **Try with demo signals** in an empty show, or **Demo signals** in Signal Monitor. It stops real PSN input and holds output. Three controllable virtual entities appear; their sliders map 0–100 to source positions 0–10. Create a block with source `demo`, select an entity and axis, move its slider to 0 and capture bottom, then move it to 100 and capture top. The calculated percentage will follow the slider.
 
-Demo mode cannot transmit MA commands. Exit demo and select real Raynok sources/calibrate again for a live show.
+To test assigned faders on grandMA2, save the MA network settings, connect MA, and click **Arm demo to MA**. A confirmation appears before arming. Moving a demo slider updates its simulated PSN entity immediately and transmits normal fader commands to its assigned targets. Demo output starts held, requires an authenticated MA connection, and returns to held when demo mode is closed, the connection drops, or **Hold output** is clicked. Exit demo and select real Raynok sources/calibrate again for live tracking.
 
 For a separate process sending actual UDP PSN packets, use:
 

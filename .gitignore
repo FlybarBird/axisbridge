@@ -8,8 +8,10 @@ node_modules/
 Thumbs.db
 build/
 dist/
+.pyinstaller-cache/
 *.spec
 artifacts/
 portal-key.txt
+ma-password.txt
 current-show.json
 installation.json

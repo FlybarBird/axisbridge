@@ -15,7 +15,7 @@ def default_show():
         'psn_interface': '', 'psn_mode': 'multicast', 'psn_group': '236.10.10.10',
         'psn_port': 56565, 'psn_source': '', 'ma_interface': '', 'ma_host': '',
         'ma_port': 30000, 'ma_user': '', 'rate_hz': 25, 'timeout_ms': 1000,
-        'deadband': 0.1}, 'blocks': []}
+        'deadband': 0.1, 'auto_start_psn': True, 'auto_connect_ma': True}, 'blocks': []}
 
 
 def ipv4(value, label, optional=False):
@@ -70,6 +70,9 @@ def validate_show(raw):
     n['rate_hz'] = number(n['rate_hz'], 'Output rate', 1, 40, True)
     n['timeout_ms'] = number(n['timeout_ms'], 'Signal timeout', 100, 30000, True)
     n['deadband'] = number(n['deadband'], 'Deadband', 0, 10)
+    for key in ('auto_start_psn', 'auto_connect_ma'):
+        if not isinstance(n[key], bool):
+            raise ValueError(f'{key.replace("_", " ")} must be on or off')
     n['ma_user'] = str(n['ma_user']).strip()
     if len(n['ma_user']) > 64 or any(c in n['ma_user'] for c in '\r\n;"\\'):
         raise ValueError('MA username contains unsupported characters')
