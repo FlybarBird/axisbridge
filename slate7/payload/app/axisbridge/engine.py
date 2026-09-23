@@ -1,8 +1,10 @@
 import copy
+import csv
 import json
 import math
 import os
 from pathlib import Path
+import subprocess
 import threading
 import time
 from collections import deque
@@ -16,6 +18,28 @@ DEMO_NAMES = ['Upstage truss', 'Center pod', 'Stage lift']
 
 class Conflict(ValueError):
     pass
+
+
+def secure_secret_file(path):
+    """Restrict a credential file to the current user on POSIX and Windows."""
+    path = Path(path)
+    if os.name != 'nt':
+        os.chmod(path, 0o600)
+        return
+    identity = subprocess.run(
+        ['whoami', '/user', '/fo', 'csv', '/nh'], capture_output=True, text=True, check=True)
+    try:
+        sid = next(csv.reader(identity.stdout.splitlines()))[1].strip()
+    except (IndexError, StopIteration) as exc:
+        raise OSError('Could not determine the current Windows user SID') from exc
+    if not sid.startswith('S-'):
+        raise OSError('Could not determine the current Windows user SID')
+    result = subprocess.run(
+        ['icacls', str(path), '/inheritance:r', '/grant:r', f'*{sid}:F'],
+        capture_output=True, text=True)
+    if result.returncode:
+        message = (result.stderr or result.stdout).strip()
+        raise OSError('Could not protect the saved MA password: ' + message)
 
 
 class Engine:
@@ -64,7 +88,7 @@ class Engine:
                 stream.flush()
                 os.fsync(stream.fileno())
         finally:
-            os.chmod(self.password_path, 0o600)
+            secure_secret_file(self.password_path)
 
     def start_automatic_connections(self):
         network = self.show['network']

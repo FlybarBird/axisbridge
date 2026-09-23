@@ -1,9 +1,11 @@
 import copy
 import json
 import math
+import os
 from pathlib import Path
 import socket
 import struct
+import subprocess
 import tempfile
 import threading
 import time
@@ -204,7 +206,12 @@ class EngineTests(unittest.TestCase):
         with patch('axisbridge.engine.MAConnection'):
             self.e.connect_ma('     ')
         self.assertEqual(self.e.password_path.read_text(),'     ')
-        self.assertEqual(self.e.password_path.stat().st_mode & 0o777,0o600)
+        if os.name == 'nt':
+            acl=subprocess.run(['icacls',str(self.e.password_path)],capture_output=True,text=True,check=True).stdout
+            self.assertNotIn('(I)',acl)
+            self.assertNotIn('Everyone:',acl)
+        else:
+            self.assertEqual(self.e.password_path.stat().st_mode & 0o777,0o600)
         self.assertNotIn('password',json.dumps(self.e.config()['show']))
 
     def test_saved_show_auto_starts_psn_and_ma_held(self):
