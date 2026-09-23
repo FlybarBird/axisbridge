@@ -2,7 +2,7 @@
 
 **Target:** GL.iNet Slate 7 **GL-BE3600**, running GL.iNet/OpenWrt firmware with `procd` and a firmware-compatible **Python 3.10+** package.
 
-Package version: **0.1.0-slate7.1**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
+Package version: **0.1.0-slate7.2**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
 
 This is a shell installer archive for SSH installation. It is **not router firmware** and must **not** be uploaded through the router's Firmware Upgrade page. An `.ipk` is not supplied because the installed firmware/package format and dependency versions have not been provided. The installer detects `opkg` or `apk` and uses only the router's existing package feeds.
 
@@ -73,7 +73,7 @@ The key is stored at `/etc/axisbridge/portal-key.txt`, readable by root. The ser
 | `/etc/init.d/axisbridge` | OpenWrt `procd` service |
 | `/usr/bin/axisbridge-ctl` | Status/start/stop/key/uninstall helper |
 | `/etc/config/axisbridge` | Portal bind address, port, enabled setting |
-| `/etc/axisbridge/` | Saved show, access key, installation receipt |
+| `/etc/axisbridge/` | Saved show, owner-only MA password, access key, installation receipt |
 
 It does **not** change Ethernet, Wi-Fi, DHCP, NAT, firewall rules, or GL.iNet's administration interface. Normal LAN access usually permits the portal; a custom/guest network may require an explicit input rule. The default portal bind is `0.0.0.0`, so access is controlled by the router's existing firewall. Do not add a public-WAN port-forward for it.
 
@@ -110,13 +110,13 @@ These are configuration requirements, not instructions to blindly apply a generi
 1. In **Network**, enter the PSN-side local IPv4, receive mode, port, group, and optional Raynok source filter.
 2. Enter the MA-side local IPv4, console IP, TCP port 30000, and MA username. Adapter IPs can be entered manually; `psutil` is optional and not required by this installer.
 3. On grandMA2 enable **Setup → Console → Global Settings → Telnet → Login Enabled**.
-4. Save network settings, start PSN, and connect MA using a user with playback rights.
+4. Save network settings, start PSN, and connect MA using a user with playback rights. Leave the two auto-connect checkboxes enabled to restore both connections after a service restart.
 5. Add control blocks, choose an entity/axis, assign `page.executor` targets, and capture bottom/top.
 6. Arm output when ready.
 
 The program controls grandMA2 through Telnet over the selected adapter. It does not join an MA-Net2 session. Monitor values labeled **Last sent** are commands sent, not console fader readback.
 
-The service starts automatically after boot and restarts after a crash, with a limited retry policy. **Every new process starts with output held, PSN stopped, and MA disconnected.** The saved mapping returns; re-enter the MA password, reconnect inputs/output, and arm manually. Show files do not store the MA password. This package does not enable unattended fader output after power loss.
+The service starts automatically after boot and restarts after a crash, with a limited retry policy. With auto-connect enabled, it starts PSN and reconnects MA from the saved settings; unavailable adapters are retried automatically. The MA password is kept separately at `/etc/axisbridge/ma-password.txt` with owner-only permissions and is not included in shows or exports. **Every new process still starts with output held.** An operator must arm output after every restart, so booting the router cannot move a fader unattended.
 
 ## Manage the service
 
@@ -158,7 +158,7 @@ This stops/disables the service and removes owned application/service files. Sav
 
 The installer is designed for BusyBox/POSIX shell and `procd`. It checks available storage: at least 12 MiB for app staging/rollback, or 64 MiB before attempting a Python install. These are conservative preflight thresholds; the package manager still determines actual dependency sizes and availability.
 
-Development verification includes shell syntax, payload integrity, rollback tests, the procd command definition, staged app imports, and the existing 28 AxisBridge protocol/backend tests. It has **not been installed on a physical Slate 7**; exact firmware package availability, interface names, and hardware performance must be confirmed on the device. Start with `--check` and retain its output if it reports an issue.
+Development verification includes shell syntax, payload integrity, rollback tests, the procd command definition, staged app imports, and all 31 AxisBridge protocol/backend tests. It has **not been installed on a physical Slate 7**; exact firmware package availability, interface names, and hardware performance must be confirmed on the device. Start with `--check` and retain its output if it reports an issue.
 
 Sources:
 

@@ -23,10 +23,10 @@ axisbridge-ctl key
 
 If 8080 is occupied, install with `sh install.sh --port=8081`.
 
-The package includes the full bridge, automatic service startup, persistent show storage, and upgrade rollback. Output starts **held** after every service restart. Reconnect PSN/MA and arm through the portal.
+The package includes the full bridge, automatic service startup, persistent show storage, saved auto-connect settings, and upgrade rollback. With auto-connect enabled, PSN and MA reconnect after a restart, but output always starts **held**. Arm through the portal only after checking both status boxes.
 
 **Configure networking before connecting show equipment.** The installer preserves the current router network configuration. The included `SETUP.md` explains assigning separate Ethernet interfaces to PSN and MA, maintaining Wi-Fi management access, and configuring DHCP/firewall rules. Its `APP-GUIDE.md` covers control blocks and calibration.
 
 Manage it with `axisbridge-ctl status`, `axisbridge-ctl logs`, or `axisbridge-ctl restart`. Remove it with `axisbridge-ctl uninstall`; saved shows and keys remain.
 
-Verified with 10 installer tests and the existing 28 app tests in development. Physical Slate 7/firmware and Raynok/grandMA2 testing remains outstanding.
+Verified with 10 installer tests and all 31 app tests in development. Physical Slate 7/firmware and Raynok/grandMA2 testing remains outstanding.

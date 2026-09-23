@@ -2,12 +2,14 @@
 
 PSN position data from Raynok → calibrated grandMA2 fader levels, with a web portal for setup and monitoring. Runs on macOS, Windows, and Raspberry Pi OS using Python 3.10 or newer. The bridge runs locally; no cloud or internet connection is needed during use.
 
-This release is runnable source with launchers, tests, and an optional native executable build script. Signed Mac/Windows installers are not included. Protocol and simulated-console tests have been run on Linux; Raynok, physical grandMA2, macOS, Windows, and Pi hardware still require acceptance testing.
+This release includes runnable source, an Intel Mac application, a Windows x64 executable, tests, and native build automation. The desktop downloads are ad-hoc/unsigned builds; Raynok, physical grandMA2, Windows, Intel Mac, and Pi hardware still require acceptance testing.
 
 
 ## Downloads and setup
 
 - [Mac, Windows, and Raspberry Pi source package](downloads/AxisBridge-v0.1.0.zip)
+- [Intel Mac application](downloads/AxisBridge-macOS-Intel.zip) — macOS 13 or newer
+- [Windows x64 application](downloads/AxisBridge-Windows-x64.zip)
 - [Slate 7 installer](downloads/AxisBridge-Slate7-Installer-v0.1.0.tar.gz)
 - [Slate 7 quick start](downloads/AxisBridge-Slate7-Quick-Start.md)
 - [Slate 7 full setup guide](slate7/SETUP.md)
@@ -25,6 +27,8 @@ This release is runnable source with launchers, tests, and an optional native ex
 The Slate 7 installer includes a copy of the app in `slate7/payload/app/`. When
 updating the app, refresh that payload and its `SHA256SUMS`, then rebuild the
 installer archive. Packaged downloads do not update automatically with source edits.
+
+The Intel Mac and Windows downloads do not require Python. On Mac, extract the ZIP and open `AxisBridge.app`; because it is not Apple-notarized, the first launch may require right-clicking the app and choosing **Open**. On Windows, extract the ZIP and open `AxisBridge.exe`. Windows may ask you to allow private-network access so the portal and PSN input can be reached.
 
 ## Start the app
 
@@ -146,7 +150,7 @@ python -m pip install pyinstaller psutil
 python scripts/build.py
 ```
 
-Use `python3` on Mac/Pi if that is your Python command. The result appears in `dist/AxisBridge` or `dist/AxisBridge.exe` with portal assets included and no separate Python install needed. This is a console executable that launches a browser, not a signed/notarized installer. The supplied source has no GUI toolkit or display-server requirement.
+Use `python3` on Mac/Pi if that is your Python command. The raw PyInstaller result appears in `dist/AxisBridge` or `dist/AxisBridge.exe` with portal assets included and no separate Python install needed. The GitHub workflow builds Windows x64 and an Intel-only Mac `.app` on native runners. Builds are not Apple-notarized or Authenticode-signed; the Mac workflow wraps its service in the native launcher under `packaging/macos/`.
 
 ## Verification
 

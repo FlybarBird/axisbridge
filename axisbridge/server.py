@@ -180,7 +180,7 @@ def main():
         for adapter in interfaces():
             if adapter['up'] and adapter['ip'] != '127.0.0.1':
                 print(f"LAN portal: http://{adapter['ip']}:{port}")
-    print('\nShow restores automatically. Start PSN, connect MA, then arm output in the portal.\nCtrl+C stops the app.\n', flush=True)
+    print('\nSaved auto-connect settings are restored automatically. Output always starts held.\nCtrl+C stops the app.\n', flush=True)
     if not args.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(f'http://{host}:{port}/#key={key}')).start()
     try:

@@ -1,0 +1,75 @@
+name: Build desktop applications
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Intel
+            os: macos-15-intel
+            artifact: AxisBridge-macOS-Intel
+          - name: Windows x64
+            os: windows-latest
+            artifact: AxisBridge-Windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip pyinstaller psutil
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build native service
+        run: python scripts/build.py
+
+      - name: Build Intel Mac application
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="packages/AxisBridge.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          clang -fobjc-arc -arch x86_64 -mmacosx-version-min=13.0 -framework Cocoa \
+            packaging/macos/AxisBridgeLauncher.m -o "$app/Contents/MacOS/AxisBridgeLauncher"
+          cp packaging/macos/Info.plist "$app/Contents/Info.plist"
+          cp dist/AxisBridge "$app/Contents/Resources/axisbridge"
+          chmod 755 "$app/Contents/MacOS/AxisBridgeLauncher" "$app/Contents/Resources/axisbridge"
+          test "$(lipo -archs "$app/Contents/MacOS/AxisBridgeLauncher")" = "x86_64"
+          test "$(lipo -archs "$app/Contents/Resources/axisbridge")" = "x86_64"
+          codesign --force --deep --sign - "$app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" packages/AxisBridge-macOS-Intel.zip
+          shasum -a 256 packages/AxisBridge-macOS-Intel.zip > packages/AxisBridge-macOS-Intel.zip.sha256
+
+      - name: Package Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force packages | Out-Null
+          & .\dist\AxisBridge.exe --help | Out-Null
+          Compress-Archive -Path dist\AxisBridge.exe -DestinationPath packages\AxisBridge-Windows-x64.zip
+          $hash = (Get-FileHash packages\AxisBridge-Windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  AxisBridge-Windows-x64.zip" | Set-Content -Encoding ascii packages\AxisBridge-Windows-x64.zip.sha256
+
+      - name: Upload application
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: packages/${{ matrix.artifact }}.zip*
+          if-no-files-found: error
+          retention-days: 30
+
