@@ -2,7 +2,7 @@
 
 **Target:** GL.iNet Slate 7 **GL-BE3600**, running GL.iNet/OpenWrt firmware with `procd` and a firmware-compatible **Python 3.10+** package.
 
-Package version: **0.1.0-slate7.6**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
+Package version: **0.1.0-slate7.7**. Includes the complete AxisBridge 0.1.0 bridge and web portal. No separate app download is required.
 
 This is a shell installer archive for SSH installation. It is **not router firmware** and must **not** be uploaded through the router's Firmware Upgrade page. An `.ipk` is not supplied because the installed firmware/package format and dependency versions have not been provided. The installer detects `opkg` or `apk` and uses only the router's existing package feeds.
 
@@ -22,7 +22,7 @@ In the portal, open **Slate screen**, choose the blocks to include, and save. No
 
 Output must be held. Every selected block must be enabled with a fresh axis sample, and low/high must differ. If any selected block fails these checks, nothing is changed. Selection changes during a hold cancel it. Status boxes distinguish PSN LIVE (fresh traffic), WAIT (listening without fresh data), DEMO, and OFF; MA LIVE means authenticated.
 
-The screen uses the firmware's existing framebuffer/touch drivers. The original GL.iNet screen is restored when AxisBridge stops, including a normal uninstall. To keep the stock screen, set `screen_enabled='0'`, commit, and restart AxisBridge. Display geometry and touch calibration follow [GL.iNet's gl-lvgl implementation](https://github.com/gl-inet/gl-lvgl/blob/main/patches/03-fix-gl-lcd-init.patch).
+The screen uses the firmware's existing framebuffer/touch drivers. The original GL.iNet screen is restored when AxisBridge stops, including a normal uninstall. To keep the stock screen, set `screen_enabled='0'`, commit, and restart AxisBridge. Display geometry follows [GL.iNet's gl-lvgl implementation](https://github.com/gl-inet/gl-lvgl/blob/main/patches/03-fix-gl-lcd-init.patch), with the home screen and touch coordinates rotated together for the router's upright viewing orientation.
 
 ### Install the bridge
 

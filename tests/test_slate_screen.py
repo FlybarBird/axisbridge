@@ -9,7 +9,7 @@ import unittest
 from axisbridge.engine import Engine, Conflict
 from axisbridge.model import default_show, validate_show
 from axisbridge.psn import decode, encode_demo
-from axisbridge.slate_screen import Canvas, HoldControl, render, WIDTH, HEIGHT
+from axisbridge.slate_screen import Canvas, HoldControl, render, touch_position, WIDTH, HEIGHT
 
 
 class HoldTests(unittest.TestCase):
@@ -46,6 +46,12 @@ class HoldTests(unittest.TestCase):
         h.pointer(True, 40, 5, 0, 1)
         h.pointer(True, 40, 35, 1, 1)
         self.assertIsNone(h.advance(5, 1))
+
+    def test_upright_touch_coordinates_match_buttons(self):
+        self.assertEqual(touch_position(75, 0), (0, 0))
+        self.assertEqual(touch_position(0, 283), (283, 75))
+        self.assertEqual(HoldControl.hit(*touch_position(35, 40)), 'bottom')
+        self.assertEqual(HoldControl.hit(*touch_position(35, 190)), 'top')
 
 
 class ScreenCaptureTests(unittest.TestCase):
@@ -116,7 +122,9 @@ class ScreenCaptureTests(unittest.TestCase):
         self.assertEqual(len(c.framebuffer()), WIDTH * HEIGHT * 2)
         c = Canvas()
         c.rect(0, 0, 1, 1, 0x1234)
-        self.assertEqual(struct.unpack_from('<H', c.framebuffer(), (HEIGHT - 1) * 2)[0], 0x1234)
+        c.rect(WIDTH - 1, HEIGHT - 1, 1, 1, 0x5678)
+        self.assertEqual(struct.unpack_from('<H', c.framebuffer(), (WIDTH - 1) * HEIGHT * 2)[0], 0x1234)
+        self.assertEqual(struct.unpack_from('<H', c.framebuffer(), (HEIGHT - 1) * 2)[0], 0x5678)
 
 
 if __name__ == '__main__':

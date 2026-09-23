@@ -79,8 +79,8 @@ class Canvas:
         self.text(x + (w - (len(value) * 6 - 1) * scale) // 2, y, value, color, scale)
 
     def framebuffer(self):
-        # Clockwise rotation from the landscape canvas into native 76x284 memory.
-        rotated = [self.pixels[y * WIDTH + x] for x in range(WIDTH) for y in range(HEIGHT - 1, -1, -1)]
+        # Counterclockwise rotation keeps the home screen upright on the router.
+        rotated = [self.pixels[y * WIDTH + x] for x in range(WIDTH - 1, -1, -1) for y in range(HEIGHT)]
         return struct.pack('<' + 'H' * len(rotated), *rotated)
 
     def ppm(self):
@@ -89,6 +89,11 @@ class Canvas:
             data.extend((((color >> 11) & 31) * 255 // 31,
                          ((color >> 5) & 63) * 255 // 63, (color & 31) * 255 // 31))
         return f'P6\n{WIDTH} {HEIGHT}\n255\n'.encode() + data
+
+
+def touch_position(raw_x, raw_y):
+    # Rotate the GL.iNet input calibration 180 degrees with the display.
+    return raw_y, HEIGHT - 1 - raw_x
 
 
 class HoldControl:
@@ -212,8 +217,8 @@ class SlateScreen:
     def loop(self, fb, touch, fcntl):
         event = struct.Struct('llHHi')
         hold = HoldControl()
-        # Driver calibration matches the GL.iNet gl-lvgl patch, not the advertised
-        # ABS max of 240 (the actual panel is 76x284).
+        # The driver's advertised ABS max of 240 is not the panel size (76x284).
+        # touch_position applies the same upright orientation as the framebuffer.
         raw_x = struct.unpack('6i', fcntl.ioctl(touch, 0x80184540, bytes(24)))[0]
         raw_y = struct.unpack('6i', fcntl.ioctl(touch, 0x80184541, bytes(24)))[0]
         def pressed():
@@ -248,7 +253,7 @@ class SlateScreen:
                     elif kind == 0 and code == 3:  # SYN_DROPPED
                         hold.cancel(); hold.down = True
                     elif kind == 0 and code == 0:
-                        hold.pointer(down, 283 - raw_y, raw_x, time.monotonic(), snapshot['revision'])
+                        hold.pointer(down, *touch_position(raw_x, raw_y), time.monotonic(), snapshot['revision'])
             # Also inspect the kernel's current contact state before any commit.
             if not pressed():
                 hold.pointer(False, 0, 0, time.monotonic(), snapshot['revision'])
